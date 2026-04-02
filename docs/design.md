@@ -1,956 +1,376 @@
-# design.md
+# design.md — Power Meter Reading Telegram Bot
 
-**Version:** 1.0  
-**Last updated:** YYYY-MM-DD  
-**Status:** Living document — updated as architecture evolves  
-**Authority:** Technical decisions source of truth; must align with `scope.md`
+**Version:** 1.0
+**Last updated:** 2026-04-01
+**Status:** Active — defines architecture, tech stack, and implementation patterns
+**Authority:** Subordinate to `scope.md`. In case of conflict, `scope.md` wins.
 
 ---
 
 ## Purpose
 
-[2-3 sentences: What is this document? Who uses it? When should it be referenced?]
-
-**Example:**
-> This document defines the technical architecture, design patterns, and implementation guidelines for {{project_name}}. It answers "how are we building this?" and serves as the reference for all code decisions during implementation and PR reviews.
+This document describes how the Power Meter Reading Telegram Bot is built — architecture, tech stack, data model, key flows, and implementation patterns. It is the reference for all technical decisions made during development.
 
 ---
 
-## 1. Architecture Overview
+## Architecture Overview
 
-### 1.1 System Context
+The system uses a 2-tier architecture:
 
-**Instructions:** Describe the system's boundaries and stakeholders in 3-5 bullets.
-
-**What to include:**
-- System's primary purpose (1 sentence)
-- Who/what uses this system (web app, mobile, APIs, users)
-- Key external dependencies (databases, third-party APIs, cloud services)
-- What this system does NOT do (boundaries)
-
-**Example starter:**
 ```
-- REST API service for {{primary_function}}
-- Integrates with: [Auth provider, Database, Cache, External APIs]
-- Serves: [Web app, Mobile app, Third-party integrations]
-- Does not handle: [List what's out of scope]
+┌─────────────────────────────────────────────────┐
+│                  Telegram Cloud                 │
+│         (message delivery, inline buttons)      │
+└──────────────────────┬──────────────────────────┘
+                       │ polling (getUpdates)
+┌──────────────────────▼──────────────────────────┐
+│               AWS EC2 (or local)                │
+│                                                 │
+│   ┌──────────────────────────────────────────┐  │
+│   │        Python Telegram Bot (PTB)         │  │
+│   │                                          │  │
+│   │  ┌─────────────┐  ┌─────────────────┐    │  │
+│   │  │  Handlers   │  │  Services layer │    │  │
+│   │  │ (commands / │→ │ (business logic)│    │  │
+│   │  │  callbacks) │  └────────┬────────┘    │  │
+│   │  └─────────────┘           │             │  │
+│   │                    ┌───────▼────────┐    │  │
+│   │                    │  Repository    │    │  │
+│   │                    │  layer (DB)    │    │  │
+│   └────────────────────┴───────┬────────┘    │  │
+│                                │             │  │
+└────────────────────────────────┼─────────────┘  │
+                                 │
+┌────────────────────────────────▼────────────────┐
+│           PostgreSQL (local / AWS RDS)          │
+│              Migrations via Flyway              │
+└─────────────────────────────────────────────────┘
 ```
+
+**Key principles:**
+- Polling mode only — no webhooks
+- Stateless bot process: all state lives in the database
+- Layered architecture: Handlers → Services → Repositories — no direct DB access from handlers
+- Inline buttons only — zero free-text input from users; meter values are entered via an inline button numeric pad interface
 
 ---
 
-### 1.2 High-Level Architecture
+## Environments
 
-**Instructions:** Show or describe the system's major components and how they interact.
+| Environment | Bot instance | Database | Hosting |
+|---|---|---|---|
+| DEV | DEV bot token (local) | Local PostgreSQL | Developer machine |
+| UAT | UAT bot token | AWS RDS PostgreSQL | AWS EC2 (UAT) |
+| PROD | PROD bot token | AWS RDS PostgreSQL | AWS EC2 (PROD) |
 
-**What to include:**
-- Architecture style (monolith, microservices, serverless, event-driven)
-- Component diagram (ASCII art or link to image)
-- Data flow between components
-- Communication patterns (REST, GraphQL, message queues, events)
-
-**Template:**
-```
-Architecture style: [Monolith | Microservices | Serverless | Layered | etc.]
-
-Diagram:
-[Insert ASCII diagram or link: docs/diagrams/architecture.png]
-
-Example structure:
-┌─────────┐
-│ Clients │
-└────┬────┘
-     │
-┌────▼────┐
-│   API   │
-└────┬────┘
-     │
-┌────▼────────┬─────────┐
-│  Database   │  Cache  │
-└─────────────┴─────────┘
-
-Component responsibilities:
-- [Component 1]: [What it does]
-- [Component 2]: [What it does]
-```
+Each environment uses its own Telegram bot token and its own database. Config is environment-specific and never hardcoded.
 
 ---
 
-### 1.3 Technology Stack
+## Tech Stack
 
-**Instructions:** List all major technologies with versions and brief rationale.
-
-**What to include:**
-- Runtime/language and version
-- Framework(s)
-- Database(s)
-- Caching layer
-- Testing tools
-- Build/deployment tools
-- Any critical libraries
-
-**Template:**
-```markdown
-| Layer | Technology | Version | Rationale |
-|-------|-----------|---------|-----------|
-| Runtime | [e.g., Node.js] | [e.g., 20 LTS] | [Why chosen] |
-| Framework | [e.g., Express] | [e.g., 4.x] | [Why chosen] |
-| Database | [e.g., PostgreSQL] | [e.g., 15] | [Why chosen] |
-| Cache | [e.g., Redis] | [e.g., 7.x] | [Why chosen] |
-| Testing | [e.g., Jest] | [e.g., 29.x] | [Why chosen] |
-
-Constraints:
-- ✅ [What you must use/follow]
-- ❌ [What you must avoid]
-```
+| Layer | Technology | Rationale |
+|---|---|---|
+| Language | Python 3.11+ | PTB library ecosystem, OCR libraries, broad community |
+| Bot framework | `python-telegram-bot` v20+ (async) | Mature, well-documented, native async support |
+| Database | PostgreSQL 15 | Same engine in DEV and PROD; strong JSON support for future flexibility |
+| ORM / DB access | SQLAlchemy 2.x (Core or ORM, TBD) + psycopg2 | Standard Python PostgreSQL stack |
+| DB migrations | Flyway | SQL-first migrations, easy CI/CD integration |
+| Charts | TBD (Phase 2) — candidates: `matplotlib`, `plotly` | Decision deferred; output must be a PNG sent via Telegram `sendPhoto` |
+| OCR | TBD (Phase 2) — candidates: Tesseract, Google Cloud Vision, OpenAI Vision API | Decision deferred; accuracy on meter photos to be evaluated |
+| Testing | `pytest` + `pytest-asyncio` | Standard async-compatible Python test framework |
+| Linting / formatting | `ruff` + `black` | Fast, modern Python linting and formatting |
+| Secret management | Environment variables via `.env` (local), AWS Secrets Manager or SSM (cloud) | Secrets never hardcoded |
+| Deployment (bot) | systemd service on EC2 | Simple, reliable process management for polling bot |
+| Deployment (DB) | Flyway CLI in deployment script | Versioned, repeatable migrations |
+| CI/CD | Shell scripts (Linux `.sh` + Windows `.bat`/`.ps1`) | Solo developer; lightweight, no CI server required initially |
+| Version control | Git + GitHub (or GitLab) | PR-based workflow per methodology |
 
 ---
 
-## 2. Design Principles
+## Project Structure
 
-### 2.1 Core Principles
-
-**Instructions:** Define 3-7 fundamental principles that guide all implementation decisions.
-
-**What to include:**
-- Principle name + 1-2 sentence description
-- How it applies to this project specifically
-- Examples of applying the principle
-
-**Common principles to consider:**
-- Fail fast / Fail safe
-- Single Responsibility
-- Dependency Injection
-- Configuration over code
-- Explicit over implicit
-- Least privilege
-- Defense in depth
-
-**Template:**
-```markdown
-**1. [Principle Name]**
-- [What it means]: [1-2 sentence description]
-- [How we apply it]: [Specific to your project]
-- [Example]: [Concrete code example or scenario]
-
-**2. [Principle Name]**
-- [What it means]: ...
-```
-
----
-
-### 2.2 Error Handling Strategy
-
-**Instructions:** Define how your system handles different types of errors.
-
-**What to include:**
-- Classification of errors (operational vs. programmer errors, or your taxonomy)
-- Strategy for each type (catch/log/retry, fail fast, etc.)
-- Error response format (JSON structure)
-- What never to expose (stack traces, internal details)
-- Logging strategy for errors
-
-**Template:**
-```markdown
-**Error types:**
-- **[Type 1 - e.g., Operational]**: [Examples] → Strategy: [How to handle]
-- **[Type 2 - e.g., Programmer]**: [Examples] → Strategy: [How to handle]
-
-**Error response format:**
-```json
-{
-  [Your standard error response structure]
-}
-```
-
-**Never expose:**
-- [Thing 1, e.g., stack traces to clients]
-- [Thing 2, e.g., database error messages]
-```
-
----
-
-### 2.3 Logging Strategy
-
-**Instructions:** Define what, when, and how to log.
-
-**What to include:**
-- Log format (structured JSON vs. plain text)
-- Log levels and when to use each (ERROR, WARN, INFO, DEBUG)
-- What to always log (user actions, errors, performance)
-- What to never log (passwords, tokens, PII per methodology.md §8)
-- Correlation/request ID strategy
-
-**Template:**
-```markdown
-**Format:** [Structured JSON | Plain text | Other]
-
-**Log levels:**
-- **ERROR**: [When to use] - [Example]
-- **WARN**: [When to use] - [Example]
-- **INFO**: [When to use] - [Example]
-- **DEBUG**: [When to use] - [Example]
-
-**Always log:**
-- ✅ [Category 1, e.g., user actions]
-- ✅ [Category 2, e.g., external API calls]
-
-**Never log:**
-- ❌ [Thing 1, e.g., passwords, per methodology.md §8]
-- ❌ [Thing 2, e.g., PII without hashing]
-
-**Correlation:** [How you track requests end-to-end]
-```
-
----
-
-## 3. Module Design
-
-### 3.1 Directory Structure
-
-**Instructions:** Define the canonical project structure and naming conventions.
-
-**What to include:**
-- Directory tree (full paths)
-- Purpose of each major directory
-- File naming conventions
-- Where tests live (co-located vs. separate)
-
-**Template:**
 ```
 project-root/
-├── [dir1]/           # [Purpose]
-│   ├── [subdir]/     # [Purpose]
-├── [dir2]/           # [Purpose]
-├── [dir3]/           # [Purpose]
-└── [config-files]    # [Purpose]
-
-**Conventions:**
-- [Convention 1, e.g., test files next to source]
-- [Convention 2, e.g., index.js exports public API]
-- [Convention 3, e.g., PascalCase for classes]
+├── bot/
+│   ├── handlers/          # Telegram update handlers (commands, callbacks)
+│   │   ├── admin.py       # Administrator flows
+│   │   ├── grayhound.py   # Grayhound flows
+│   │   ├── tenant.py      # Tenant flows
+│   │   └── common.py      # Shared handlers (start, help, error)
+│   ├── services/          # Business logic (role-aware, no Telegram API calls)
+│   │   ├── reading.py     # Meter reading logic
+│   │   ├── roles.py       # Role assignment / validation
+│   │   ├── export.py      # CSV export
+│   │   └── charts.py      # Chart generation (Phase 2)
+│   ├── repositories/      # DB access (SQLAlchemy queries)
+│   │   ├── users.py
+│   │   ├── readings.py
+│   │   ├── apartments.py
+│   │   └── roles.py
+│   ├── models/            # SQLAlchemy model definitions
+│   ├── keyboards/         # InlineKeyboardMarkup builders
+│   └── main.py            # Bot entry point, Application setup
+├── db/
+│   └── migrations/        # Flyway SQL migration files (V1__init.sql, etc.)
+├── tests/
+│   ├── unit/
+│   └── integration/
+├── scripts/
+│   ├── deploy_linux.sh
+│   └── deploy_windows.ps1
+├── docs/
+│   ├── scope.md
+│   ├── design.md
+│   ├── tracker.md
+│   └── handoff.md
+├── .env.example           # Template for local env vars
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
 ```
 
 ---
 
-### 3.2 Layer Responsibilities
+## Data Model
 
-**Instructions:** Define each architectural layer's responsibilities and boundaries.
+### `users`
 
-**What to include:**
-- For each layer: purpose, responsibilities, what it CAN do, what it CANNOT do
-- Code example showing the pattern
-- How layers communicate (direct calls, events, etc.)
+| Column | Type | Notes |
+|---|---|---|
+| id | BIGINT PK | Telegram user ID |
+| username | VARCHAR | Telegram username (nullable) |
+| full_name | VARCHAR | Display name |
+| created_at | TIMESTAMPTZ | |
+| is_active | BOOLEAN | Soft-delete / deactivation |
 
-**Common layers to define:**
-- API/Controller layer (HTTP handling)
-- Service/Business logic layer
-- Repository/Data access layer
-- Utilities/Helpers
+### `apartments`
 
-**Template for each layer:**
-```markdown
-**[Layer Name] (e.g., Service Layer):**
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL PK | |
+| number | VARCHAR | Apartment number (e.g. "42", "42A") |
+| floor | INT | |
+| notes | TEXT | Optional |
 
-Purpose: [1 sentence]
+### `user_roles`
 
-Responsibilities:
-- ✅ [Thing it should do]
-- ✅ [Thing it should do]
-- ❌ [Thing it should NOT do]
-- ❌ [Thing it should NOT do]
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL PK | |
+| user_id | BIGINT FK → users.id | |
+| role | VARCHAR | `administrator`, `grayhound`, `tenant` |
+| apartment_id | BIGINT FK → apartments.id | NULL for administrator/grayhound |
+| valid_from | DATE | Role valid from |
+| valid_to | DATE | Role valid until (NULL = indefinite) |
+| assigned_by | BIGINT FK → users.id | Administrator who assigned the role |
+| created_at | TIMESTAMPTZ | |
 
-Code pattern:
-```[language]
-[Minimal example showing structure]
+**Notes:**
+- A user can hold multiple roles simultaneously (e.g. Administrator + Grayhound)
+- Role validity is checked at request time
+- Tenants are scoped to one apartment via `apartment_id`
+
+### `meters`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL PK | |
+| apartment_id | BIGINT FK → apartments.id | |
+| meter_number | VARCHAR | Physical meter ID / serial |
+| installed_at | DATE | |
+| is_active | BOOLEAN | |
+
+### `readings`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL PK | |
+| meter_id | BIGINT FK → meters.id | |
+| value | NUMERIC(10,2) | kWh reading |
+| read_at | TIMESTAMPTZ | When the reading was submitted |
+| submitted_by | BIGINT FK → users.id | |
+| source | VARCHAR | `manual`, `photo` |
+| photo_file_id | VARCHAR | Telegram file_id if source=photo (Phase 2) |
+| notes | TEXT | Optional |
+
+---
+
+## Role Permission Matrix
+
+| Action | Tenant | Grayhound | Administrator |
+|---|---|---|---|
+| Submit reading for own apartment | ✅ | ✅ | ✅ |
+| Submit reading for any apartment | ❌ | ✅ | ✅ |
+| View own readings / chart | ✅ | ✅ | ✅ |
+| View any apartment readings / chart | ❌ | ✅ | ✅ |
+| View building-wide chart | ❌ | ✅ | ✅ |
+| Export CSV (own apartment) | ✅ | ✅ | ✅ |
+| Export CSV (all apartments) | ❌ | ✅ | ✅ |
+| Assign / revoke roles | ❌ | ❌ | ✅ |
+| Add / deactivate users | ❌ | ❌ | ✅ |
+| Manage apartment list | ❌ | ❌ | ✅ |
+
+---
+
+## Key Flows
+
+### 1. User onboarding
+
+```
+User sends /start
+  → Bot checks if user exists in DB
+    → New user: Bot registers user, notifies Administrator
+    → Existing user with no active role: Bot shows "pending approval" message
+    → Existing user with active role: Bot shows role-appropriate main menu
 ```
 
-**[Repeat for each layer]**
+### 2. Tenant submits a meter reading
+
+```
+Tenant taps "Submit Reading" (inline button)
+  → Bot shows apartment confirmation (pre-filled from role record)
+  → Tenant confirms → Bot shows inline numeric pad (0–9, backspace, confirm)
+  → Tenant enters value digit by digit → Bot shows confirmation: "Apartment 42 — 1234.56 kWh. Confirm?"
+  → Tenant confirms → Reading saved to DB → Bot shows success + timestamp
+```
+
+### 3. Administrator assigns a role
+
+```
+Admin taps "Manage Users"
+  → Bot lists registered users (paginated inline buttons)
+  → Admin selects user → Bot shows current roles
+  → Admin taps "Add Role" → selects role type
+  → If Tenant: Admin selects apartment from inline list
+  → Admin sets valid_from / valid_to (or "indefinite")
+  → Bot shows confirmation → Admin confirms → Role saved to DB
+```
+
+### 4. CSV export
+
+```
+User taps "Export CSV"
+  → Role check: Tenant → own apartment only; Grayhound/Admin → select scope
+  → Bot queries readings, generates CSV in memory
+  → Bot sends CSV as document via sendDocument
+```
+
+### 5. Chart generation (Phase 2)
+
+```
+User taps "View Chart"
+  → Role check determines available scope
+  → User selects apartment (or building-wide for Grayhound/Admin)
+  → User selects period (last month / last 3 months / custom)
+  → Service queries readings, generates PNG chart
+  → Bot sends PNG via sendPhoto
 ```
 
 ---
 
-### 3.3 Testing Strategy
+## UX Patterns
 
-**Instructions:** Define what kinds of tests you write and when.
+- **All navigation and input via inline buttons** — no slash commands beyond `/start` and `/help`; meter values entered via an inline numeric pad (digits 0–9, backspace, confirm)
+- **Confirmation step** before any write operation (reading submission, role change)
+- **Pagination** for lists longer than 5 items (apartments, users)
+- **Back button** on every screen — users can always return to the previous menu
+- **Error messages** are user-friendly ("Something went wrong, please try again") — technical details logged only
+- **Session state** managed via `ConversationHandler` in PTB — state stored in memory (stateless across restarts; in-progress conversations are reset on bot restart, which is acceptable)
 
-**What to include:**
-- Test types (unit, integration, e2e)
-- When to write each type
-- Coverage expectations (reference methodology.md §7)
-- Where tests live
-- How to run tests (commands)
+---
 
-**Template:**
-```markdown
-**Unit Tests:**
-- Purpose: [What they test]
-- Scope: [One function/class]
-- Mocking: [What to mock]
-- Coverage target: [X% per methodology.md §7]
-- Run: `[command]`
+## Configuration
 
-**Integration Tests:**
-- Purpose: [What they test]
-- Scope: [Multiple layers/components]
-- Environment: [Test DB, in-memory, etc.]
-- When to run: [Every commit, before merge, etc.]
-- Run: `[command]`
+All configuration via environment variables. Never hardcoded.
 
-**E2E Tests (if applicable):**
-- Purpose: [What they test]
-- Scope: [Full user flows]
-- Environment: [Staging, Docker Compose]
-- When to run: [Nightly, before release]
-- Run: `[command]`
+| Variable | Description |
+|---|---|
+| `BOT_TOKEN` | Telegram bot token |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `ENVIRONMENT` | `dev`, `uat`, `prod` |
+| `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` |
+| `ADMIN_TELEGRAM_ID` | Bootstrap admin user ID (used for first-run setup only) |
+
+Local development uses a `.env` file (git-ignored). UAT/PROD use AWS SSM Parameter Store or Secrets Manager.
+
+---
+
+## Testing Strategy
+
+- **Unit tests:** Services and repositories tested with mocked DB / mocked PTB context
+- **Integration tests:** Key flows tested against a real local PostgreSQL instance (test DB, reset between runs)
+- **Coverage target:** ≥ 80% on changed lines per PR (per `scope.md` SLOs)
+- **Test runner:** `pytest` with `pytest-asyncio` for async handlers
+- **No manual testing replaces automated tests** — every merged feature must have tests
+
+---
+
+## Deployment
+
+### Local (DEV)
+
+```bash
+cp .env.example .env          # fill in BOT_TOKEN, DATABASE_URL
+flyway migrate                 # apply DB migrations
+python -m bot.main             # run bot locally
+```
+
+### UAT / PROD (Linux EC2)
+
+```bash
+./scripts/deploy_linux.sh [uat|prod]
+# Script responsibilities:
+#   1. Pull latest code from Git
+#   2. Install/update dependencies (pip)
+#   3. Run Flyway migrations against target DB
+#   4. Restart systemd service
+```
+
+### Windows (developer machine UAT push)
+
+```powershell
+.\scripts\deploy_windows.ps1 [uat|prod]
+# Same steps as Linux script, PowerShell syntax
 ```
 
 ---
 
-## 4. Security Guidelines
+## Architecture Decision Records (ADRs)
 
-### 4.1 Authentication & Authorization
+### ADR-001: Polling vs. Webhooks
+**Decision:** Polling mode.
+**Rationale:** Simpler deployment (no public HTTPS endpoint required, no reverse proxy setup). Polling latency is acceptable for a building-internal tool with low message volume.
+**Trade-off:** Slightly higher latency than webhooks; revisit if PROD load warrants it.
 
-**Instructions:** Define how your system proves identity and enforces permissions.
+### ADR-002: Local PostgreSQL in DEV (not SQLite)
+**Decision:** PostgreSQL locally, same as UAT/PROD.
+**Rationale:** Eliminates an entire class of environment-parity bugs (data types, constraints, query behaviour). SQLite differences (e.g. no native TIMESTAMPTZ) would create false confidence in local tests.
+**Trade-off:** Slightly more setup for DEV environment.
 
-**What to include:**
-- Authentication mechanism (JWT, sessions, OAuth, API keys)
-- Token/session lifetime and storage
-- Authorization model (RBAC, ABAC, claims-based)
-- Where auth checks happen (middleware, service layer)
-- Implementation references (file paths)
+### ADR-003: Inline buttons only — including numeric meter value entry
+**Decision:** Zero free-text input from users. All interactions, including meter value entry, are handled via inline buttons. Meter values are entered via an inline numeric pad (digit-by-digit buttons: 0–9, backspace, confirm).
+**Rationale:** Eliminates an entire class of input validation bugs. Enforces valid state transitions at the UX level. Consistent interaction model across all roles and flows.
+**Trade-off:** Numeric pad keyboard builder adds implementation complexity. Multi-digit entry requires managing an in-progress value in `ConversationHandler` state. Revisit UX if users find digit-by-digit entry slow for large values.
 
-**Template:**
-```markdown
-**Authentication:**
-- Mechanism: [JWT | Sessions | OAuth | API Keys]
-- Token lifetime: [Access: X min, Refresh: Y days]
-- Storage: [Where tokens are stored]
-- Invalidation: [How to logout/revoke]
+### ADR-004: ConversationHandler state in memory
+**Decision:** PTB `ConversationHandler` state is in-memory (not persisted to DB).
+**Rationale:** Simplicity. In-progress multi-step flows (e.g. reading submission) reset on bot restart. Given low message volume and infrequent restarts, this is acceptable.
+**Trade-off:** Users mid-flow during a restart must start that flow again. Revisit if this proves disruptive.
 
-**Authorization:**
-- Model: [RBAC | ABAC | Claims-based]
-- Roles: [List roles: admin, user, guest]
-- Permission checks: [Where in code: middleware, service layer]
+### ADR-005: OCR library — deferred
+**Decision:** Not decided. Evaluate in Phase 2.
+**Rationale:** Accuracy on real electricity meter photos must be tested before committing. Candidates: Tesseract (free, local), Google Cloud Vision (accurate, paid), OpenAI Vision API (flexible, paid).
+**Trade-off:** Phase 2 scope may shift depending on OCR evaluation results.
 
-**Implementation:** See `[file path]` for details.
-```
-
----
-
-### 4.2 Input Validation
-
-**Instructions:** Define how you validate and sanitize all inputs.
-
-**What to include:**
-- Validation library/approach (Joi, Zod, manual)
-- Where validation happens (API boundary, service layer, both)
-- What to validate (types, formats, ranges, business rules)
-- Sanitization steps (trim, normalize, escape)
-
-**Template:**
-```markdown
-**Validation library:** [Joi | Zod | Yup | Custom]
-
-**Where:** [API boundary | Service layer | Both]
-
-**Validate:**
-- ✅ [Type 1, e.g., all request body fields]
-- ✅ [Type 2, e.g., file uploads - size, type]
-- ✅ [Type 3, e.g., query parameters]
-
-**Sanitize:**
-- [Step 1, e.g., trim all string inputs]
-- [Step 2, e.g., normalize emails to lowercase]
-
-**Example:**
-```[language]
-[Validation schema or code example]
-```
-```
+### ADR-006: Chart library — deferred
+**Decision:** Not decided. Evaluate in Phase 2.
+**Rationale:** Output must be a PNG sent via `sendPhoto`. Both `matplotlib` and `plotly` (static export) are viable. Decision depends on chart complexity required.
 
 ---
 
-### 4.3 Data Protection
+## Changelog
 
-**Instructions:** Define how you protect sensitive data.
-
-**What to include:**
-- Secrets management (where stored, how accessed)
-- Encryption (at rest, in transit)
-- Hashing (passwords, sensitive fields)
-- Database security (parameterized queries, least privilege)
-- Reference to methodology.md §8
-
-**Template:**
-```markdown
-**Secrets:**
-- Storage: [.env local | AWS Secrets Manager prod | etc.]
-- Access: [Environment variables]
-- Rotation: [Frequency and process]
-- Per methodology.md §8: Never commit secrets
-
-**Sensitive data:**
-- Passwords: [bcrypt cost 10-12 | Argon2 | etc.]
-- PII: [Encrypt at rest | Hash before storage]
-- Logs: [Redact before logging]
-
-**Database:**
-- Use parameterized queries (prevents SQL injection)
-- Principle of least privilege (app user permissions)
-- SSL/TLS connections: [Yes | No, why]
-```
-
----
-
-### 4.4 Security Headers
-
-**Instructions:** Define required HTTP security headers.
-
-**What to include:**
-- List of required headers
-- Configuration (code snippet or reference to middleware)
-- Rationale for each header
-
-**Template:**
-```markdown
-**Required headers:**
-- `[Header-Name]`: [Purpose]
-- `[Header-Name]`: [Purpose]
-
-**Implementation:**
-```[language]
-[Code snippet showing how headers are set]
-```
-
-**Reference:** [OWASP recommendations, security scanning results]
-```
-
----
-
-## 5. Performance Guidelines
-
-### 5.1 Database Optimization
-
-**Instructions:** Define patterns for efficient database usage.
-
-**What to include:**
-- Query patterns (indexes, limits, joins)
-- Connection management (pooling)
-- Common anti-patterns to avoid (N+1, SELECT *)
-- Monitoring strategy
-
-**Template:**
-```markdown
-**Query patterns:**
-- ✅ [Pattern 1, e.g., always use indexes on WHERE clauses]
-- ✅ [Pattern 2, e.g., use LIMIT for pagination]
-- ❌ [Anti-pattern 1, e.g., avoid N+1 queries]
-- ❌ [Anti-pattern 2, e.g., no SELECT * in production]
-
-**Connection management:**
-- [Strategy: pooling, max connections, timeout]
-
-**Example:**
-[Code showing good pattern vs bad pattern]
-```
-
----
-
-### 5.2 Caching Strategy
-
-**Instructions:** Define what, where, and how to cache.
-
-**What to include:**
-- What to cache (and what NOT to cache)
-- Cache layers (in-memory, Redis, CDN)
-- TTL strategy
-- Cache invalidation approach
-
-**Template:**
-```markdown
-**What to cache:**
-- ✅ [Type 1, e.g., user profiles - read-heavy, change-light]
-- ✅ [Type 2, e.g., config data]
-- ❌ [Type 3, e.g., real-time data]
-- ❌ [Type 4, e.g., sensitive user data unless encrypted]
-
-**Cache layers:**
-1. [Layer 1, e.g., In-memory]: [When to use]
-2. [Layer 2, e.g., Redis]: [When to use]
-3. [Layer 3, e.g., CDN]: [When to use]
-
-**TTL strategy:**
-- [Data type 1]: [TTL duration and why]
-- [Data type 2]: [TTL duration and why]
-
-**Invalidation:**
-- [When and how cache is cleared]
-```
-
----
-
-### 5.3 Rate Limiting
-
-**Instructions:** Define rate limits to protect against abuse.
-
-**What to include:**
-- Limits per endpoint type (general API, login, expensive operations)
-- Algorithm (token bucket, leaky bucket, fixed window)
-- Response format when limit exceeded
-- Implementation reference
-
-**Template:**
-```markdown
-**Limits:**
-- General API: [X requests per Y time per Z identifier]
-- Login/auth: [X requests per Y time to prevent brute force]
-- Expensive ops: [X requests per Y time for report generation, etc.]
-
-**Algorithm:** [Token bucket | Leaky bucket | Fixed window]
-
-**Response when exceeded:**
-```http
-HTTP/1.1 429 Too Many Requests
-[Headers to include]
-```
-
-**Implementation:** See `[file path]`
-```
-
----
-
-## 6. Observability
-
-### 6.1 Monitoring Metrics
-
-**Instructions:** Define what metrics you track and how.
-
-**What to include:**
-- Key metrics (request rate, latency, error rate, resources)
-- Tools used (Prometheus, DataDog, CloudWatch)
-- Dashboards (what's displayed)
-
-**Template:**
-```markdown
-**Key metrics:**
-- [Metric 1, e.g., Request rate (req/sec by endpoint)]
-- [Metric 2, e.g., Latency (P50, P95, P99)]
-- [Metric 3, e.g., Error rate (4xx, 5xx by endpoint)]
-- [Metric 4, e.g., Resource usage (CPU, memory)]
-
-**Tools:** [Prometheus | DataDog | New Relic | CloudWatch]
-
-**Dashboards:** [Link to dashboards or describe what's shown]
-```
-
----
-
-### 6.2 Alerting
-
-**Instructions:** Define when and how to alert on-call.
-
-**What to include:**
-- Conditions that trigger alerts
-- Alert channels (PagerDuty, Slack, email)
-- Escalation policy
-- What NOT to alert on (to reduce noise)
-
-**Template:**
-```markdown
-**Alert on:**
-- 🚨 [Condition 1, e.g., Error rate >5% for 5 min]
-- 🚨 [Condition 2, e.g., P95 latency >500ms for 5 min]
-- 🚨 [Condition 3, e.g., DB connection pool exhausted]
-
-**Channels:** [PagerDuty | Slack | Email | Phone]
-
-**Escalation:**
-- [Step 1: Page on-call immediately]
-- [Step 2: Escalate to lead after X minutes]
-- [Step 3: Escalate to director after Y minutes]
-
-**Don't alert on:**
-- [Noise 1, e.g., single failed request]
-- [Noise 2, e.g., planned maintenance]
-```
-
----
-
-### 6.3 Health Checks
-
-**Instructions:** Define health check endpoints for orchestrators.
-
-**What to include:**
-- Liveness endpoint (is process running?)
-- Readiness endpoint (can handle traffic?)
-- What each endpoint checks
-- Response format
-
-**Template:**
-```markdown
-**Liveness probe:**
-- Endpoint: `[GET /health/live]`
-- Checks: [Process is alive]
-- Response: [200 OK with simple status]
-
-**Readiness probe:**
-- Endpoint: `[GET /health/ready]`
-- Checks: [List what's checked: DB, cache, external APIs]
-- Response: [200 OK if ready, 503 if not ready]
-
-**Example response:**
-```json
-[Sample JSON response]
-```
-
-**Used by:** [Kubernetes | ECS | Load balancer]
-```
-
----
-
-## 7. Deployment & Operations
-
-### 7.1 Environment Strategy
-
-**Instructions:** Define your environments and their purposes.
-
-**What to include:**
-- List of environments (local, test, staging, prod)
-- Purpose of each
-- When deployments happen
-- Data characteristics (fake, anonymized, real)
-
-**Template:**
-```markdown
-| Environment | Purpose | Deploy Trigger | Data |
-|-------------|---------|----------------|------|
-| **[Env 1]** | [Purpose] | [When] | [Data type] |
-| **[Env 2]** | [Purpose] | [When] | [Data type] |
-| **[Env 3]** | [Purpose] | [When] | [Data type] |
-
-**Config differences:**
-- [Env 1]: [Config approach, log level, scale]
-- [Env 2]: [Config approach, log level, scale]
-```
-
----
-
-### 7.2 Deployment Process
-
-**Instructions:** Document your CI/CD pipeline and deployment steps.
-
-**What to include:**
-- CI/CD steps in order (lint, test, build, deploy)
-- Quality gates (what must pass)
-- Deployment mechanism (kubectl, terraform, etc.)
-- Rollback procedure
-- Reference to methodology.md §9 for CI expectations
-
-**Template:**
-```markdown
-**Pipeline steps (per methodology.md §9):**
-1. [Step 1, e.g., Lint]
-2. [Step 2, e.g., Unit tests with coverage]
-3. [Step 3, e.g., Build]
-4. [Step 4, e.g., Integration tests]
-5. [Step 5, e.g., Security scans]
-6. [Step 6, e.g., Build artifact (Docker image)]
-7. [Step 7, e.g., Deploy to environment]
-8. [Step 8, e.g., Smoke tests]
-9. [Step 9, e.g., Monitor for X minutes]
-
-**Rollback:** [How to rollback, SLA for rollback time]
-
-**Artifacts:** [Where images/builds are stored]
-```
-
----
-
-### 7.3 Database Migrations
-
-**Instructions:** Define your database change management strategy.
-
-**What to include:**
-- Migration tool (Flyway, Liquibase, framework migrations)
-- How migrations are versioned
-- Where migration files live
-- Testing strategy (staging first)
-- Rollback approach
-
-**Template:**
-```markdown
-**Tool:** [Flyway | Liquibase | Knex | Sequelize | Alembic]
-
-**Versioning:** [How files are named/numbered]
-
-**Location:** [Directory path]
-
-**Process:**
-1. [Step 1, e.g., Write migration file]
-2. [Step 2, e.g., Test on local DB]
-3. [Step 3, e.g., Apply to staging]
-4. [Step 4, e.g., Verify staging]
-5. [Step 5, e.g., Apply to production]
-
-**Rollback:** [How to reverse migrations]
-
-**Rules:**
-- ✅ [Rule 1, e.g., Always backward-compatible]
-- ❌ [Rule 2, e.g., Never rename columns, add new and deprecate old]
-```
-
----
-
-## 8. Decision Log (ADRs)
-
-**Instructions:** Document all significant architectural decisions here. Each decision gets a numbered ADR.
-
-**What to include:**
-- ADR number, title, date, status
-- Context (what problem, what forces)
-- Decision made
-- Consequences (pros and cons)
-- Alternatives considered
-
-**Template for each ADR:**
-```markdown
-### 8.X ADR-XXX: [Decision Title]
-
-**Date:** YYYY-MM-DD  
-**Status:** [Proposed | Accepted | Deprecated | Superseded by ADR-YYY]
-
-**Context:**
-[What problem are we solving? What requirements or constraints matter?]
-
-**Decision:**
-[What did we decide to do?]
-
-**Consequences:**
-- ✅ [Positive consequence 1]
-- ✅ [Positive consequence 2]
-- ❌ [Negative consequence / tradeoff 1]
-- ❌ [Negative consequence / tradeoff 2]
-
-**Alternatives Considered:**
-- **[Option A]**: [Why we didn't choose this]
-- **[Option B]**: [Why we didn't choose this]
-```
-
-**Start with your first few major decisions:**
-- ADR-001: Choice of primary language/runtime
-- ADR-002: Choice of database
-- ADR-003: Authentication approach
-- ADR-004: [Your next major decision]
-
----
-
-## 9. Coding Standards
-
-### 9.1 Language-Specific Conventions
-
-**Instructions:** Define your code style and conventions.
-
-**What to include:**
-- Naming conventions (PascalCase, camelCase, UPPER_SNAKE_CASE)
-- Language features to use/avoid
-- Formatting rules (or reference to .eslintrc, prettier config)
-- File organization patterns
-
-**Template:**
-```markdown
-**Naming:**
-- Classes: [Convention]
-- Functions/methods: [Convention]
-- Variables: [Convention]
-- Constants: [Convention]
-- Private fields: [Convention]
-
-**Language features:**
-- ✅ Use: [Feature 1, e.g., const/let, not var]
-- ✅ Use: [Feature 2, e.g., async/await]
-- ❌ Avoid: [Anti-pattern 1, e.g., any type]
-- ❌ Avoid: [Anti-pattern 2, e.g., non-null assertions]
-
-**Formatting:**
-- [Reference to config file: .eslintrc, .prettierrc]
-- Or [Manual rules: indent X spaces, max line length Y]
-```
-
----
-
-### 9.2 Comments & Documentation
-
-**Instructions:** Define when and how to write comments and docs.
-
-**What to include:**
-- When to comment (why not what)
-- JSDoc/docstring format for public APIs
-- README requirements
-- When to skip comments (self-explanatory code)
-
-**Template:**
-```markdown
-**Comment when:**
-- ✅ [Reason 1, e.g., Non-obvious "why" decisions]
-- ✅ [Reason 2, e.g., Gotchas and warnings]
-- ✅ [Reason 3, e.g., Complex algorithms]
-- ❌ [Not for: obvious "what" code does]
-
-**Documentation format:**
-- Public APIs: [JSDoc | Docstrings | TypeDoc]
-- Inline: [Brief comments explaining rationale]
-
-**Example:**
-```[language]
-[Sample documented function]
-```
-```
-
----
-
-### 9.3 Git Commit Messages
-
-**Instructions:** Define commit message format and conventions.
-
-**What to include:**
-- Format standard (Conventional Commits recommended)
-- Types (feat, fix, docs, etc.)
-- Scope usage
-- Examples of good commits
-
-**Template:**
-```markdown
-**Format:** [Conventional Commits | Custom format]
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-**Types:**
-- `feat`: [When to use]
-- `fix`: [When to use]
-- `docs`: [When to use]
-- `refactor`: [When to use]
-- [Add other types you use]
-
-**Examples:**
-```
-[Example 1]
-[Example 2]
-```
-```
-
----
-
-## 10. Extensibility & Future Work
-
-### 10.1 Extension Points
-
-**Instructions:** Document where the system is designed to be extended.
-
-**What to include:**
-- Planned extension mechanisms (plugins, hooks, configs)
-- How to add new features without modifying core
-- Examples of future extensions
-
-**Template:**
-```markdown
-**Designed for extension:**
-- [Area 1, e.g., Validation rules - plugin system]
-- [Area 2, e.g., Authentication providers - strategy pattern]
-- [Area 3, e.g., Output formats - adapter pattern]
-
-**How to extend:**
-- [Instructions or reference to extension guide]
-
-**Planned extensions:**
-- [Future feature 1]
-- [Future feature 2]
-```
-
----
-
-### 10.2 Tech Debt Tracking
-
-**Instructions:** Define how you track and manage technical debt.
-
-**What to include:**
-- How to document debt (TODO comments with ticket IDs)
-- Where debt is tracked (tracker.md, JIRA, GitHub issues)
-- Review cadence
-- Reference to handoff.md for blocking debt
-
-**Template:**
-```markdown
-**Document debt:**
-- In code: `// TODO(T-XXX): [Description]`
-- In tracker.md: Task with type "tech-debt"
-- In handoff.md: If blocking future work (per methodology.md §4)
-
-**Review cadence:** [Weekly | Monthly | Quarterly]
-
-**Priority criteria:**
-- [When debt gets prioritized: blocks features, security risk, etc.]
-```
-
----
-
-## 11. Changelog
-
-**Instructions:** Track major changes to this design document.
-
-**Template:**
-```markdown
 | Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| YYYY-MM-DD | 1.0 | Initial design document | [Name] |
-| | | | |
-```
-
----
-
-## Appendix A: Useful References
-
-**Instructions:** Link to external resources referenced in this document.
-
-**Template:**
-```markdown
-**Official Documentation:**
-- [Technology 1]: [URL]
-- [Technology 2]: [URL]
-
-**Security:**
-- OWASP Top 10: [URL]
-- [Relevant security guide]: [URL]
-
-**Design Patterns:**
-- [Resource 1]: [URL]
-- [Resource 2]: [URL]
-
-**Internal:**
-- [Related doc 1]: [path or URL]
-- [Related doc 2]: [path or URL]
-```
-
----
-
-## Instructions for Using This Template
-
-1. **Copy this file** to your project's `docs/` directory as `design.md`
-2. **Replace all `[bracketed placeholders]`** with your actual content
-3. **Delete instruction paragraphs** (the "Instructions:" sections) after filling in
-4. **Remove sections** that don't apply to your project
-5. **Add sections** if you need additional topics not covered here
-6. **Reference the example** (`design_example.md`) for detailed content ideas
-7. **Update regularly** as your design evolves (it's a living document)
-8. **Link from tracker.md** tasks to specific sections (e.g., "See design.md §3.4")
-
-**This template provides the structure; you provide the specifics for your project.**
-
----
-
-**End of design_template.md**
+|---|---|---|---|
+| 2026-04-01 | 1.0 | Initial design document | AI-assisted |
