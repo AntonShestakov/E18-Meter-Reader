@@ -1,7 +1,7 @@
 # design.md — Power Meter Reading Telegram Bot
 
-**Version:** 1.0
-**Last updated:** 2026-04-01
+**Version:** 1.1
+**Last updated:** 2026-04-02
 **Status:** Active — defines architecture, tech stack, and implementation patterns
 **Authority:** Subordinate to `scope.md`. In case of conflict, `scope.md` wins.
 
@@ -19,31 +19,31 @@ The system uses a 2-tier architecture:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                  Telegram Cloud                 │
-│         (message delivery, inline buttons)      │
+│                  Telegram Cloud                  │
+│         (message delivery, inline buttons)       │
 └──────────────────────┬──────────────────────────┘
                        │ polling (getUpdates)
 ┌──────────────────────▼──────────────────────────┐
-│               AWS EC2 (or local)                │
-│                                                 │
+│               AWS EC2 (or local)                 │
+│                                                  │
 │   ┌──────────────────────────────────────────┐  │
-│   │        Python Telegram Bot (PTB)         │  │
-│   │                                          │  │
-│   │  ┌─────────────┐  ┌─────────────────┐    │  │
-│   │  │  Handlers   │  │  Services layer │    │  │
-│   │  │ (commands / │→ │ (business logic)│    │  │
-│   │  │  callbacks) │  └────────┬────────┘    │  │
+│   │        Python Telegram Bot (PTB)          │  │
+│   │                                           │  │
+│   │  ┌─────────────┐  ┌─────────────────┐   │  │
+│   │  │  Handlers   │  │  Services layer  │   │  │
+│   │  │ (commands / │→ │ (business logic) │   │  │
+│   │  │  callbacks) │  └────────┬────────┘   │  │
 │   │  └─────────────┘           │             │  │
 │   │                    ┌───────▼────────┐    │  │
 │   │                    │  Repository    │    │  │
 │   │                    │  layer (DB)    │    │  │
-│   └────────────────────┴───────┬────────┘    │  │
+│   └────────────────────┴───────┬────────┘   │  │
 │                                │             │  │
 └────────────────────────────────┼─────────────┘  │
                                  │
 ┌────────────────────────────────▼────────────────┐
-│           PostgreSQL (local / AWS RDS)          │
-│              Migrations via Flyway              │
+│           PostgreSQL (local / AWS RDS)            │
+│              Migrations via Flyway                │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -110,6 +110,7 @@ project-root/
 │   │   └── roles.py
 │   ├── models/            # SQLAlchemy model definitions
 │   ├── keyboards/         # InlineKeyboardMarkup builders
+│   ├── texts.py           # ALL user-facing strings: button labels, messages, prompts
 │   └── main.py            # Bot entry point, Application setup
 ├── db/
 │   └── migrations/        # Flyway SQL migration files (V1__init.sql, etc.)
@@ -190,9 +191,22 @@ project-root/
 | value | NUMERIC(10,2) | kWh reading |
 | read_at | TIMESTAMPTZ | When the reading was submitted |
 | submitted_by | BIGINT FK → users.id | |
-| source | VARCHAR | `manual`, `photo` |
-| photo_file_id | VARCHAR | Telegram file_id if source=photo (Phase 2) |
+| source | VARCHAR | `numeric` (button pad), `photo` |
+| photo_file_id | VARCHAR | Telegram file_id; required when source=photo |
 | notes | TEXT | Optional |
+
+### `apartments` — additional column
+
+The `apartments` table includes a `photo_required` flag:
+
+| Column | Type | Notes |
+|---|---|---|
+| ... | | (see above) |
+| photo_required | BOOLEAN | If TRUE, tenant must upload a photo; numeric-only submission is rejected |
+
+**Notes:**
+- When `photo_required = TRUE` for an apartment, the submit reading flow requires a photo upload. Numeric pad entry is still shown (to capture the value), but submission is blocked until a photo is attached.
+- Grayhounds and Administrators are exempt from the `photo_required` constraint — they can always submit numerically.
 
 ---
 
@@ -213,6 +227,43 @@ project-root/
 
 ---
 
+## Menu Structure
+
+### `/start` — role-based main menu
+
+**New user (no role assigned):**
+- Request for meter submeeting
+- About Bot
+
+**Tenant:**
+- Submit Reading
+- View Own Readings / Chart
+- Request for Meter Submeeting
+- About Bot
+
+**Grayhound:**
+- Submit Reading
+- Export Readings (CSV)
+- View Readings / Chart
+- Request for Meter Submeeting
+- About Bot
+
+**Administrator:**
+- Submit Reading
+- Export Readings (CSV)
+- View Own Readings / Chart
+- Requests
+- Assign / Revoke Roles
+- Add / Deactivate Users
+- Manage Apartment List
+- About Bot
+
+**Notes:**
+- A user holding both Administrator and Grayhound roles sees the Administrator menu (highest-privilege menu wins)
+- Menu is rebuilt on each `/start` based on active roles at that moment
+
+---
+
 ## Key Flows
 
 ### 1. User onboarding
@@ -220,63 +271,143 @@ project-root/
 ```
 User sends /start
   → Bot checks if user exists in DB
-    → New user: Bot registers user, notifies Administrator
-    → Existing user with no active role: Bot shows "pending approval" message
+    → New user: Bot registers user, sends notification to Administrator, shows new-user menu
+    → Existing user with no active role: Bot shows "pending approval" message + new-user menu
     → Existing user with active role: Bot shows role-appropriate main menu
 ```
 
-### 2. Tenant submits a meter reading
+### 2. About Bot
 
 ```
-Tenant taps "Submit Reading" (inline button)
-  → Bot shows apartment confirmation (pre-filled from role record)
-  → Tenant confirms → Bot shows inline numeric pad (0–9, backspace, confirm)
-  → Tenant enters value digit by digit → Bot shows confirmation: "Apartment 42 — 1234.56 kWh. Confirm?"
-  → Tenant confirms → Reading saved to DB → Bot shows success + timestamp
+User taps "About Bot"
+  → Bot sends static info message (text from texts.py)
+  → [Back] button → returns to main menu
 ```
 
-### 3. Administrator assigns a role
+### 3. Request for Meter Submeeting
 
 ```
-Admin taps "Manage Users"
-  → Bot lists registered users (paginated inline buttons)
-  → Admin selects user → Bot shows current roles
-  → Admin taps "Add Role" → selects role type
-  → If Tenant: Admin selects apartment from inline list
-  → Admin sets valid_from / valid_to (or "indefinite")
-  → Bot shows confirmation → Admin confirms → Role saved to DB
+User taps "Request for Meter Submeeting"
+  → Bot shows hint message explaining what to include (text from texts.py)
+  → Bot shows inline numeric pad for the user to compose their request
+     (or: a pre-defined set of reason buttons + optional free comment — TBD)
+  → User submits request → Bot forwards request to Administrator(s)
+  → Bot confirms: "Your request has been sent."
+  → [Back] button → returns to main menu
 ```
 
-### 4. CSV export
+> ⚠️ **Open question:** Is the request a free-text message (exception to inline-only rule) or a structured form via buttons? To be decided before Phase 1 implementation.
+
+### 4. Submit Reading — Tenant (single apartment)
 
 ```
-User taps "Export CSV"
-  → Role check: Tenant → own apartment only; Grayhound/Admin → select scope
-  → Bot queries readings, generates CSV in memory
+Tenant taps "Submit Reading"
+  → Bot checks for existing reading in current month
+    → Reading exists: Bot shows existing value + "Already submitted this month. Replace?" [Yes] [No]
+    → No reading: proceed
+  → Bot confirms apartment (pre-filled, no selection needed)
+  → Bot shows inline numeric pad (digits 0–9, decimal point, backspace, confirm)
+  → Tenant enters value digit by digit; current value displayed above pad
+  → Tenant taps [Confirm]
+    → If apartment.photo_required = TRUE:
+        Bot shows "Please upload a photo of your meter"
+        Tenant uploads photo → Bot shows value + photo thumbnail + [Submit] [Cancel]
+    → If apartment.photo_required = FALSE:
+        Bot shows "Apartment 42 — 1234.5 kWh. Confirm?" [Submit] [Cancel]
+  → Tenant taps [Submit] → Reading saved to DB (source: numeric or photo)
+  → Bot shows success message + timestamp → [Back] to main menu
+```
+
+### 5. Submit Reading — Grayhound (any apartment)
+
+```
+Grayhound taps "Submit Reading"
+  → Bot shows paginated apartment list (inline buttons, sorted by number)
+  → Grayhound selects apartment
+  → Bot checks for existing reading in current month
+    → Reading exists: Bot shows existing value + "Already submitted this month. Replace?" [Yes] [No]
+    → No reading: proceed
+  → Bot shows inline numeric pad
+  → Grayhound enters value → [Confirm]
+  → Bot shows "Apartment 42 — 1234.5 kWh. Confirm?" [Submit] [Cancel]
+  → Grayhound taps [Submit] → Reading saved to DB
+  → Bot shows success + [Submit Another] [Back to Menu]
+```
+
+> Note: `photo_required` constraint does NOT apply to Grayhounds or Administrators.
+
+### 6. Export Readings (CSV) — Grayhound / Administrator
+
+```
+User taps "Export Readings (CSV)"
+  → Bot shows paginated list of months with readings (e.g. "March 2026 — 94 apartments")
+  → User selects a month (or "All time")
+  → Bot generates CSV in memory, sends as document via sendDocument
+  → [Back] button → returns to main menu
+```
+
+### 7. View Own Readings / Chart — Tenant / Administrator
+
+```
+Phase 1:
+User taps "View Own Readings / Chart"
+  → Bot generates CSV of own apartment readings
   → Bot sends CSV as document via sendDocument
+  → [Back] button → returns to main menu
+
+Phase 2:
+  → Bot shows period selector (last month / last 3 months / all time)
+  → Bot generates PNG chart, sends via sendPhoto
 ```
 
-### 5. Chart generation (Phase 2)
+### 8. View Readings / Chart — Grayhound
 
 ```
-User taps "View Chart"
-  → Role check determines available scope
-  → User selects apartment (or building-wide for Grayhound/Admin)
-  → User selects period (last month / last 3 months / custom)
-  → Service queries readings, generates PNG chart
-  → Bot sends PNG via sendPhoto
+To be delivered (Phase 2)
+  → Will follow similar pattern to flow 7 but with apartment/building scope selection
+```
+
+### 9. Requests — Administrator
+
+```
+To be delivered
+  → Administrator reviews pending submeeting requests from tenants/grayhounds
+```
+
+### 10. Assign / Revoke Roles — Administrator
+
+```
+To be delivered
+  → Paginated user list → select user → view/edit roles → assign role + apartment + validity period
+```
+
+### 11. Add / Deactivate Users — Administrator
+
+```
+To be delivered
+  → Manage user active status; deactivated users lose access
+```
+
+### 12. Manage Apartment List — Administrator
+
+```
+To be delivered
+  → Add apartments, set photo_required flag, edit details
 ```
 
 ---
 
 ## UX Patterns
 
-- **All navigation and input via inline buttons** — no slash commands beyond `/start` and `/help`; meter values entered via an inline numeric pad (digits 0–9, backspace, confirm)
+- **All navigation and input via inline buttons** — no slash commands beyond `/start`; meter values entered via an inline numeric pad (digits 0–9, decimal point, backspace, confirm)
+- **All user-facing strings in `texts.py`** — button labels, messages, prompts, and error texts are never hardcoded inline; always imported from `bot/texts.py`
 - **Confirmation step** before any write operation (reading submission, role change)
-- **Pagination** for lists longer than 5 items (apartments, users)
+- **Duplicate reading guard** — bot checks for an existing reading in the current month before allowing submission; user must explicitly confirm replacement
+- **Photo-required flag** — per-apartment setting; when set, tenant submission flow mandates a photo upload before the reading can be saved
+- **Pagination** for lists longer than 5 items (apartments, users, months)
 - **Back button** on every screen — users can always return to the previous menu
-- **Error messages** are user-friendly ("Something went wrong, please try again") — technical details logged only
-- **Session state** managed via `ConversationHandler` in PTB — state stored in memory (stateless across restarts; in-progress conversations are reset on bot restart, which is acceptable)
+- **Error messages** are user-friendly (text from `texts.py`) — technical details logged only
+- **Session state** managed via `ConversationHandler` in PTB — state stored in memory (stateless across restarts; in-progress conversations reset on bot restart, which is acceptable)
 
 ---
 
@@ -374,3 +505,4 @@ python -m bot.main             # run bot locally
 | Date | Version | Changes | Author |
 |---|---|---|---|
 | 2026-04-01 | 1.0 | Initial design document | AI-assisted |
+| 2026-04-02 | 1.1 | Added menu structure, full flow for all roles, grayhound reading flow, photo_required per apartment, texts.py, duplicate reading guard | AI-assisted |
