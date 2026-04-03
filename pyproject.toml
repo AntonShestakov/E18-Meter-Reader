@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "e18-meter-reader"
+version = "0.1.0"
+description = "Telegram Bot for electricity meter reading in residential buildings"
+authors = [{name = "Developer"}]
+requires-python = ">=3.11"
+dependencies = [
+    "python-telegram-bot[all]>=20.0",
+    "sqlalchemy>=2.0",
+    "psycopg2-binary",
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "ruff",
+    "black",
+]
+
+[tool.setuptools]
+packages = ["bot"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"

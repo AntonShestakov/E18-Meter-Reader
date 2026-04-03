@@ -1,17 +1,14 @@
 # tracker.md
 
 **Version:** 1.0  
-**Last updated:** YYYY-MM-DD  
+**Last updated:** 2026-04-02  
 **Status:** Active task tracking — single source of truth for work items
 
 ---
 
 ## Purpose
 
-[1-2 sentences: What is this document? How is it used?]
-
-**Example:**
-> This document tracks all tasks for {{project_name}}, their acceptance criteria, status, owners, and evidence of completion. It's the primary reference for "what needs to be done" and is updated continuously throughout the project.
+This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, status, owners, and evidence of completion. It's the primary reference for "what needs to be done" and is updated continuously throughout the project.
 
 ---
 
@@ -30,7 +27,7 @@
 
 ```markdown
 ## T-XXX — [Task Title]
-- Owner: [Name or role]
+- Owner: Developer
 - Status: [⚪/🔵/✅/⚠️] [X%] | Dates: [started YYYY-MM-DD, expected by YYYY-MM-DD, last touched YYYY-MM-DD]
 - Scope: [Link to scope.md section if applicable]
 - Design: [Link to design.md section if applicable]
@@ -47,104 +44,136 @@
 
 ## Active Tasks
 
-**Instructions:** Tasks currently in progress (🔵) or blocked (⚠️). Keep this section lean — ideally ≤3 active tasks per person.
-
-### Example Task:
-
-## T-001 — Implement User Authentication
-- Owner: Dev Team
-- Status: 🔵 60% | Dates: started 2025-10-15, expected by 2025-10-22, last touched 2025-10-21
-- Scope: scope.md § Goals (secure access)
-- Design: design.md §4.1 (JWT with RS256)
+## T-001 — Set up project structure and dependencies
+- Owner: Developer
+- Status: ✅ 100% | Dates: started 2026-04-02, expected by 2026-04-02, last touched 2026-04-02
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Project Structure
 - Acceptance criteria:
-  - POST /auth/login returns JWT token for valid credentials
-  - POST /auth/refresh rotates refresh token
-  - Protected endpoints return 401 for invalid/missing tokens
-  - Unit tests ≥80% coverage on auth logic
-  - Integration test proves full login flow works
-- Evidence: PR #12 (in review), CI run #203 (all green)
+  - Project folder structure created: bot/handlers/, bot/services/, bot/repositories/, migrations/, tests/
+  - pyproject.toml created with python-telegram-bot, pytest, ruff, black, sqlalchemy, psycopg2, flyway (or equivalent)
+  - Python virtual environment configured and activated
+  - Basic dependencies installed and importable
+- Evidence: Project structure created, pyproject.toml added, venv activated, imports successful
 - Dependencies: None
-- Notes: Using `jsonwebtoken` library; access token TTL 15min, refresh 7 days
-
----
-
-[Add your active tasks here using the template above]
+- Notes: Use Python 3.11+, local PostgreSQL for dev
 
 ---
 
 ## Backlog (Not Started)
 
-**Instructions:** Tasks defined but not yet started (⚪). Prioritize top-to-bottom.
-
-## T-XXX — [Task Title]
-- Owner: [Name]
-- Status: ⚪ 0% | Dates: planned start YYYY-MM-DD, expected by YYYY-MM-DD
-- Scope: [Link]
-- Design: [Link]
+## T-002 — Design and implement database schema
+- Owner: Developer
+- Status: 🔵 0% | Dates: started 2026-04-02, expected by 2026-04-03, last touched 2026-04-02
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Tech Stack (PostgreSQL, Flyway)
 - Acceptance criteria:
-  - [Criterion 1]
-  - [Criterion 2]
-- Evidence: [Will be added when started]
-- Dependencies: [None or T-XXX]
+  - Flyway migration scripts created for tables: users, roles, role_assignments, readings
+  - Schema supports three roles with time-scoped assignments
+  - Local PostgreSQL database set up and migrations applied
+  - Basic repository layer classes created for DB access
+- Evidence: Will be added when started
+- Dependencies: T-001
+- Notes: Use SQLAlchemy Core for queries
 
----
+## T-003 — Implement core PTB skeleton
+- Owner: Developer
+- Status: ⚪ 0% | Dates: planned start 2026-04-03, expected by 2026-04-04
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Architecture Overview
+- Acceptance criteria:
+  - main.py created with PTB Application and polling setup
+  - /start command handler implemented with inline button menu
+  - Basic error handling and logging configured
+  - Bot responds to /start with role selection buttons
+- Evidence: Will be added when started
+- Dependencies: T-001
+- Notes: Use async PTB v20+
 
-[Add backlog tasks here]
+## T-004 — Implement user role management
+- Owner: Developer
+- Status: ⚪ 0% | Dates: planned start 2026-04-04, expected by 2026-04-05
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Project Structure (handlers/admin.py)
+- Acceptance criteria:
+  - Administrator can assign roles (Tenant, Grayhound) to users with start/end dates
+  - Role assignment stored in database with validity periods
+  - Admin UI via inline buttons to manage users and roles
+  - Role checks implemented in handlers
+- Evidence: Will be added when started
+- Dependencies: T-002, T-003
+- Notes: Roles scoped to time periods
+
+## T-005 — Implement tenant meter reading flow
+- Owner: Developer
+- Status: ⚪ 0% | Dates: planned start 2026-04-05, expected by 2026-04-06
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Project Structure (handlers/tenant.py)
+- Acceptance criteria:
+  - Tenant can initiate reading submission via inline button
+  - Numeric input via inline button keypad (0-9, submit)
+  - Reading stored in database with timestamp and apartment
+  - Confirmation message sent after submission
+- Evidence: Will be added when started
+- Dependencies: T-003, T-004
+- Notes: Manual numeric input only, no free text
+
+## T-006 — Implement grayhound reading flow
+- Owner: Developer
+- Status: ⚪ 0% | Dates: planned start 2026-04-06, expected by 2026-04-07
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Project Structure (handlers/grayhound.py)
+- Acceptance criteria:
+  - Grayhound can select apartment from inline button list
+  - Numeric input for reading via inline keypad
+  - Reading stored for selected apartment
+  - Access restricted to building-level
+- Evidence: Will be added when started
+- Dependencies: T-003, T-004
+- Notes: Can submit for any apartment in building
+
+## T-007 — Implement CSV export
+- Owner: Developer
+- Status: ⚪ 0% | Dates: planned start 2026-04-07, expected by 2026-04-08
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Project Structure (services/)
+- Acceptance criteria:
+  - /export command available to Administrator and Grayhound
+  - Exports all readings to CSV file sent via Telegram
+  - CSV includes date, apartment, reading value
+  - File sent as document attachment
+- Evidence: Will be added when started
+- Dependencies: T-002, T-005, T-006
+- Notes: Basic export, no filters yet
+
+## T-008 — Add basic unit tests
+- Owner: Developer
+- Status: ⚪ 0% | Dates: planned start 2026-04-08, expected by 2026-04-09
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Tech Stack (pytest)
+- Acceptance criteria:
+  - Unit tests for handlers, services, repositories
+  - Test coverage >=80% on changed lines
+  - Tests for role checks, reading submission, export
+  - pytest configured and runnable
+- Evidence: Will be added when started
+- Dependencies: T-003 to T-007
+- Notes: Focus on core flows
 
 ---
 
 ## Blocked Tasks
 
-**Instructions:** Tasks that cannot proceed (⚠️). Each must have an owner for unblocking and target unblock date.
-
-## T-XXX — [Task Title]
-- Owner: [Name]
-- Status: ⚠️ [X%] | Dates: started YYYY-MM-DD, blocked since YYYY-MM-DD
-- Blocker: [What's blocking? Who can unblock?]
-- Unblock owner: [Name or team]
-- Target unblock date: YYYY-MM-DD
-- Scope: [Link]
-- Design: [Link]
-- Acceptance criteria:
-  - [Criteria]
-- Evidence: [Evidence so far]
-- Dependencies: [What must happen to unblock]
-- Notes: [Context about the blocker]
-
----
-
-[Add blocked tasks here if any]
-
 ---
 
 ## Completed Tasks
-
-**Instructions:** Tasks that are done (✅). Keep recent completions for reference, archive older ones.
-
-## T-XXX — [Task Title]
-- Owner: [Name]
-- Status: ✅ 100% | Dates: started YYYY-MM-DD, completed YYYY-MM-DD
-- Scope: [Link]
-- Design: [Link]
-- Acceptance criteria:
-  - [Criterion 1] ✅
-  - [Criterion 2] ✅
-- Evidence: [PR #XX merged, CI run #YYY, docs updated]
-- Dependencies: [None or T-XXX]
-- Notes: [Any learnings, follow-up needed]
-
----
-
-[Add completed tasks here, most recent first]
 
 ---
 
 ## Task Numbering
 
-**Instructions:** Use sequential numbering starting from T-001. Never reuse numbers.
-
-**Current highest number:** T-XXX  
-**Next task:** T-XXX
+**Current highest number:** T-008  
+**Next task:** T-009
 
 ---
 
@@ -158,11 +187,6 @@ Use these tags to categorize tasks:
 - `[docs]` — Documentation-only changes
 - `[infra]` — CI/CD, deployment, infrastructure
 - `[research]` — Spike, investigation, proof-of-concept
-
-**Example:**
-```
-## T-042 — [tech-debt] Refactor CSV parser for memory efficiency
-```
 
 ---
 
@@ -190,8 +214,6 @@ Use these tags to categorize tasks:
 
 ## Evidence Guidelines
 
-**Instructions:** Evidence proves acceptance criteria are met. Link to concrete artifacts.
-
 **Good evidence includes:**
 - PR numbers (e.g., "PR #42")
 - CI run links (e.g., "CI run #203 - all checks passed")
@@ -213,8 +235,6 @@ Evidence:
 
 ## Dependencies & Blockers
 
-**Instructions:** Track what must happen before a task can complete.
-
 **Dependency types:**
 - **Task dependency**: "T-042 must complete before T-043 can start"
 - **External dependency**: "Waiting for API keys from partner team"
@@ -233,27 +253,9 @@ Evidence:
 
 ## Changelog
 
-**Instructions:** Track when this document was updated.
-
 | Date | Changes | Author |
 |------|---------|--------|
-| YYYY-MM-DD | Initial tracker created | [Name] |
-| | | |
-
----
-
-## Instructions for Using This Template
-
-1. **Copy this file** to your project's `docs/` directory as `tracker.md`
-2. **Replace placeholders** with actual tasks
-3. **Delete instruction paragraphs** after understanding them
-4. **Update continuously** — after every work session
-5. **Reference from handoff.md** — active tasks should appear in handoff
-6. **Keep it current** — stale tracker is worse than no tracker
-7. **Review weekly** — groom backlog, update statuses, resolve blockers
-8. **Archive completed** — move old completed tasks to separate file if tracker gets long
-
-**This is your single source of truth for "what needs to be done."**
+| 2026-04-02 | Initial tracker created with Phase 1 tasks | Developer |
 
 ---
 
@@ -266,5 +268,3 @@ Evidence:
 - **PR descriptions** — Link to tracker task numbers for traceability
 
 ---
-
-**End of tracker_template.md**
