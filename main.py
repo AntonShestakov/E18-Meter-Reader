@@ -7,6 +7,7 @@ Menu structure per design.md § Menu Structure.
 
 import logging
 import os
+from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
@@ -16,6 +17,9 @@ from bot.database import DatabaseManager
 from bot.repositories.users import UsersRepository
 from bot.repositories.roles import UserRolesRepository
 from bot.services.roles import RoleService
+
+# Load environment variables from .env.local (local development)
+load_dotenv(dotenv_path=".env.local")
 
 # Configure logging
 logging.basicConfig(
@@ -52,11 +56,11 @@ async def post_init(application: Application) -> None:
         # Initialize services
         role_service = RoleService(roles_repo, users_repo)
 
-        # Store in application context for handler access
-        application.context_types.bot_data["db_manager"] = db_manager
-        application.context_types.bot_data["users_repo"] = users_repo
-        application.context_types.bot_data["roles_repo"] = roles_repo
-        application.context_types.bot_data["role_service"] = role_service
+        # Store in application bot_data for handler access
+        application.bot_data["db_manager"] = db_manager
+        application.bot_data["users_repo"] = users_repo
+        application.bot_data["roles_repo"] = roles_repo
+        application.bot_data["role_service"] = role_service
 
         logger.info("Bot has started and is listening for commands")
     except Exception as e:
