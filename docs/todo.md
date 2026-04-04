@@ -1,8 +1,8 @@
 # todo.md
 
-**Session Date:** YYYY-MM-DD
-**Time Budget:** [X hours]
-**Session Goal:** [Brief description of what this session aims to accomplish]
+**Session Date:** 2026-04-03
+**Time Budget:** ~4 hours
+**Session Goal:** Complete database integration in handlers, establish logging framework, consolidate menu builders
 
 ---
 
@@ -30,74 +30,155 @@ This document contains the **session-specific subset** of tasks from `tracker.md
 
 ---
 
-## Active Tasks for This Session
+## Active Tasks for This Session (COMPLETED)
 
-**Instructions:** List 1-3 tasks from tracker.md that you'll work on this session. Include task ID, title, and acceptance criteria for easy reference.
-
-### T-XXX — [Task Title from Tracker]
+### T-003d — Implement handler logging decorator ✅
 
 **From tracker.md:**
 - Acceptance criteria:
-  - [Criterion 1]
-  - [Criterion 2]
-  - [Criterion 3]
+  - `bot/handlers/decorators.py` created with `@log_handler` decorator ✅
+  - Decorator logs handler name, start/end events, execution duration ✅
+  - Decorator extracts and logs user/chat info from Update ✅
+  - Decorator logs Context data optionally ✅
+  - Decorator applied to all handlers (common.py, admin.py, tenant.py, grayhound.py) ✅
+  - All tests passing (23/23) ✅
+  - Design documentation added ✅
 
 **Session-specific notes:**
-- [Any context specific to working on this NOW]
-- [Dependencies to check before starting]
-- [Known risks or blockers to watch for]
+- Created @log_handler decorator with comprehensive logging
+- Supports include_context and include_update parameters
+- Applied to 7 handlers across 4 files
+- Zero security concerns (no sensitive data logged by default)
 
-**Expected progress this session:**
-- [What you realistically expect to complete]
-- [What might carry over to next session]
+**Progress:**
+- ✅ Completed fully
 
 ---
 
-### T-XXX — [Second Task, if time permits]
+### T-003 — Implement core PTB skeleton (ADVANCED 50% → 75%)
 
 **From tracker.md:**
 - Acceptance criteria:
-  - [Criterion 1]
-  - [Criterion 2]
+  - /start handler checks user roles and DB existence ✅
+  - Role-based menu returns correct buttons per role ✅
+  - Error handler logs and responds gracefully ✅
+  - Database integration complete: queries UsersRepository, RoleService ✅
+  - New user auto-registration working ✅
+  - Highest-privilege role menu selection working ✅
 
 **Session-specific notes:**
-- [Context]
-- [Only start if T-XXX completes early]
+- Consolidated menu builders to single source (keyboards.py)
+- start() now queries DB for user existence and role
+- DatabaseManager initialization in post_init()
+- Services and repos stored in application.bot_data for handler access
+
+**Progress:**
+- ✅ From 50% → 75% complete
+- Pending: Integration tests with real database operations
 
 ---
 
-## Session Priorities
+## Next Session Tasks (Future Work)
+
+### T-004 — Implement user role management (READY TO START)
+
+**From tracker.md:**
+- Acceptance criteria:
+  - Administrator can assign/revoke roles (inline button flow)
+  - Role validity periods enforced (valid_from, valid_to)
+  - Tenant role assignment scoped to apartment_id
+  - Role checks in /start determine correct menu per user ✅ (already done)
+  - Highest-privilege role menu wins ✅ (already done)
+
+**Session-specific notes:**
+- RoleService already created with assign_role(), revoke_role(), get_highest_privilege_role()
+- Pending: Callback handlers in handlers/admin.py to wire role assignment UI
+- Pending: Pagination for user/role list
+- Expected: ~1-2 days
+
+---
+
+### T-005 — Implement tenant meter reading flow (BLOCKED on T-004)
+
+**From tracker.md:**
+- Acceptance criteria:
+  - Tenant can initiate reading submission via inline button
+  - Numeric input via inline button keypad (0-9, submit)
+  - Reading stored in database with timestamp and apartment
+  - Confirmation message sent after submission
+
+**Session-specific notes:**
+- ReadingService already created with validation/submission logic
+- Numeric keypad (build_numeric_keypad) in keyboards.py ready
+- Pending: Callback handlers in handlers/tenant.py
+- Pending: State management for multi-step flow (conversation state)
+- Expected: ~1-2 days after T-004
+
+---
+
+### T-006 — Implement grayhound reading flow (BLOCKED on T-004)
+
+**From tracker.md:**
+- Acceptance criteria:
+  - Grayhound can select apartment from inline button list
+  - Numeric input for reading via inline keypad
+  - Reading stored for selected apartment
+  - Access restricted to building-level
+
+**Session-specific notes:**
+- RoleService already enforces grayhound privilege level
+- Apartment selector (build_apartment_selector) ready
+- Pending: Callback handlers in handlers/grayhound.py
+- Expected: ~1-2 days after T-004
+
+---
+
+## Session Priorities (This Session — COMPLETED)
 
 **Must complete (P0):**
-- T-XXX: [Task title] — [Why this is critical]
+- T-003d: Implement handler logging decorator — **✅ COMPLETED** — Provides observability for all handler execution
+- T-003: Advance database integration in /start — **✅ COMPLETED** — Now queries DB for user roles and creates new users
 
 **Should complete (P1):**
-- T-XXX: [Task title] — [Nice to have, but not blocking]
+- Consolidate menu builders (DRY) — **✅ COMPLETED** — Single source of truth in keyboards.py
+- Update design.md and tracker.md — **✅ COMPLETED** — Documentation synchronized
 
 **Could complete if time (P2):**
-- T-XXX: [Task title] — [Bonus if we get here]
+- Begin T-004 (role management) — Not started (scoped for next session)
 
 ---
 
 ## Context for This Session
 
 **What happened last session:**
-- [Brief summary from handoff.md]
-- [Any carry-over from last time]
+- Database schema created and Flyway migrations applied
+- Repository layer fully functional (6 repos)
+- Services layer created (ReadingService, RoleService, ExportService)
+- Handler stubs created with @log_handler decorator
+- Pre-commit quality gates configured
 
 **Current blockers/dependencies:**
-- [Anything that could stop progress]
-- [Dependencies on other tasks or external factors]
+- None — all dependencies cleared (T-001, T-002 complete)
 
 **Environment notes:**
-- [Any special setup needed: test DB, API keys, etc.]
-- [Known issues with local environment]
+- Local PostgreSQL 15 running on Windows
+- Python 3.12, venv activated
+- All dependencies installed and importable
+- Pre-commit hooks configured and passing
 
 ---
 
 ## Success Criteria for This Session
 
-By end of session, we should have:
+**By end of session, we should have:**
+- ✅ Handler logging decorator fully implemented and applied to all handlers
+- ✅ Database integration in /start handler (user queries, new user creation, role checking)
+- ✅ Single menu builder source of truth
+- ✅ 23/23 unit tests passing (6 main + 17 pre-commit)
+- ✅ All code quality checks passing (7/7 pre-commit hooks)
+- ✅ T-002 marked 100% complete
+- ✅ T-003 advanced to 75% complete
+- ✅ handoff.md and tracker.md updated with session progress
 - [ ] [Specific deliverable 1]
 - [ ] [Specific deliverable 2]
 - [ ] [Tests written and passing]
