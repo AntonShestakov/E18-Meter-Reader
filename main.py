@@ -11,7 +11,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
 from bot import texts
-from bot.keyboards import build_main_menu_for_role
+from bot.handlers.common import start
 
 # Configure logging
 logging.basicConfig(
@@ -29,25 +29,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             await update.effective_message.reply_text(texts.UNEXPECTED_ERROR)
         except TelegramError as e:
             logger.error(f"Failed to send error message: {e}")
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle the /start command.
-
-    TODO: Integrate with DB to:
-    1. Check if user exists
-    2. Get user's active roles
-    3. Select highest-privilege menu
-
-    For now, shows new user menu as placeholder.
-    """
-    # TODO: Replace with actual DB user/role lookup
-    user_role = None  # Placeholder: will be replaced with DB query
-
-    menu = build_main_menu_for_role(role=user_role)
-
-    await update.message.reply_text(texts.START_MESSAGE, reply_markup=menu)
 
 
 async def post_init(application: Application) -> None:
