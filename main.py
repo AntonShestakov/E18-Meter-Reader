@@ -27,6 +27,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Suppress verbose httpx logging (HTTP client used by Telegram API)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log the error and send a message to notify the user."""
