@@ -456,6 +456,63 @@ Local development uses a `.env` file (git-ignored). UAT/PROD use AWS SSM Paramet
 
 ---
 
+## Implementation Status
+
+### Created Files (As of 2026-04-03)
+
+**Models & Database:**
+- ✅ `bot/models.py` — Tortoise ORM model definitions (5 models: User, Apartment, Meter, UserRole, Reading)
+- ✅ `bot/database.py` — DatabaseManager with async init/close/health_check
+- ✅ `migrations/V1__initial_schema.sql` — Flyway migration with schema (users, apartments, meters, user_roles, readings)
+
+**Repository Layer:**
+- ✅ `bot/repositories/base.py` — BaseRepository generic async CRUD
+- ✅ `bot/repositories/users.py` — UsersRepository (queries, deactivation)
+- ✅ `bot/repositories/apartments.py` — ApartmentsRepository (CRUD)
+- ✅ `bot/repositories/meters.py` — MetersRepository (apartment-scoped)
+- ✅ `bot/repositories/roles.py` — UserRolesRepository (time-scoped role logic)
+- ✅ `bot/repositories/readings.py` — ReadingsRepository (submission, history)
+
+**Services Layer (Business Logic):**
+- ✅ `bot/services/reading.py` — ReadingService (validation, submission, history)
+- ✅ `bot/services/roles.py` — RoleService (assignment, permission checks, privilege hierarchy)
+- ✅ `bot/services/export.py` — ExportService (CSV export, role-based filtering)
+
+**Handlers Layer:**
+- ✅ `bot/handlers/common.py` — Shared handlers (/start, /help, /cancel, errors)
+- 🔵 `bot/handlers/admin.py` — Administrator-only flows (stub)
+- 🔵 `bot/handlers/tenant.py` — Tenant flows (stub)
+- 🔵 `bot/handlers/grayhound.py` — Grayhound flows (stub)
+
+**UI & Configuration:**
+- ✅ `bot/texts.py` — All user-facing strings (messages, button labels, prompts)
+- ✅ `bot/keyboards.py` — InlineKeyboardMarkup builders (menus, numeric pad, confirmations)
+- ✅ `.env.example` — Template for local environment variables
+
+**Tests:**
+- ✅ `tests/test_main.py` — Role-based menu tests (6/6 passing)
+- ✅ `tests/test_repositories.py` — Repository initialization tests (8/8 passing)
+- 🔵 `tests/test_services.py` — Service layer tests (pending)
+- 🔵 `tests/test_handlers.py` — Handler integration tests (pending)
+
+### Pending Work
+
+**Handler Implementation:**
+- Implement callback handlers in handlers/{admin,tenant,grayhound}.py
+- Integrate services and repositories into handler workflows
+- Add state management for multi-step flows (reading submission, role assignment)
+
+**Database Integration in Main:**
+- Initialize DatabaseManager in main() startup
+- Integrate role/user queries into /start handler
+- Connect menu builder to actual database role lookups
+
+**Service Integration:**
+- Wire services into handlers
+- Add business logic for reading validation, role checks, exports
+
+---
+
 ## Testing Strategy
 
 - **Unit tests:** Services and repositories tested with mocked DB / mocked PTB context

@@ -99,9 +99,36 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 - Dependencies: T-001, T-002 (for user/role DB queries)
 - Notes: Menu structure from design.md §Menu Structure; role checks at /start time; highest-privilege role menu wins if user has multiple roles
 
+## T-003b — Implement handlers and services layer
+- Owner: Developer
+- Status: 🔵 50% | Dates: started 2026-04-03, expected by 2026-04-05, last touched 2026-04-03
+- Scope: scope.md § Phased Scope Phase 1
+- Design: design.md § Project Structure, Implementation Status
+- Acceptance criteria:
+  - Service layer created: ReadingService, RoleService, ExportService ✅
+  - handlers/common.py with /start, /help, /cancel, error handler ✅
+  - handlers/{admin,tenant,grayhound}.py created with callback stubs ✅
+  - texts.py with all user-facing strings (100+ strings) ✅
+  - keyboards.py with menu/numeric pad builders ✅
+  - services/__init__.py exports all three services ✅
+  - handlers/__init__.py exports all handler modules ✅
+  - Handler callbacks wired to service methods (pending)
+  - State management for multi-step flows (pending)
+  - 8+ integration tests for handlers/services (pending)
+- Evidence: 
+  - bot/services/reading.py created with validation/submission logic
+  - bot/services/roles.py created with permission checks and privilege hierarchy
+  - bot/services/export.py created with CSV generation and role-based filtering
+  - bot/handlers/common.py created with /start, /help, /cancel handlers
+  - bot/texts.py created with 50+ user-facing strings
+  - bot/keyboards.py created with role-aware menu builders and numeric pad
+  - All files pass syntax validation and import successfully
+- Dependencies: T-001, T-002, T-003
+- Notes: Services follow repository pattern; handlers are thin layer over services; texts.py centralizes i18n prep
+
 ## T-004 — Implement user role management
 - Owner: Developer
-- Status: ⚪ 0% | Dates: planned start 2026-04-04, expected by 2026-04-05, last touched 2026-04-03
+- Status: ⚪ 0% | Dates: planned start 2026-04-05, expected by 2026-04-06, last touched 2026-04-03
 - Scope: scope.md § Phased Scope Phase 1
 - Design: design.md § Project Structure (handlers/admin.py), Role Permission Matrix
 - Acceptance criteria:
