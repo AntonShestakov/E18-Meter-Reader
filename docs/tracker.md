@@ -64,45 +64,56 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 
 ## T-002 — Design and implement database schema
 - Owner: Developer
-- Status: 🔵 0% | Dates: started 2026-04-02, expected by 2026-04-03, last touched 2026-04-02
+- Status: 🔵 50% | Dates: started 2026-04-02, expected by 2026-04-03, last touched 2026-04-03
 - Scope: scope.md § Phased Scope Phase 1
-- Design: design.md § Tech Stack (PostgreSQL, Flyway)
+- Design: design.md § Tech Stack (PostgreSQL, Flyway), Data Model
 - Acceptance criteria:
-  - Flyway migration scripts created for tables: users, roles, role_assignments, readings
-  - Schema supports three roles with time-scoped assignments
-  - Local PostgreSQL database set up and migrations applied
-  - Basic repository layer classes created for DB access
-- Evidence: Will be added when started
+  - Flyway migration scripts created for tables: users, roles, role_assignments, readings ✅
+  - Schema supports three roles with time-scoped assignments ✅
+  - Local PostgreSQL database set up and migrations applied (pending local DB setup)
+  - Basic repository layer classes created for DB access ✅
+- Evidence: 
+  - migrations/V1__initial_schema.sql created with users, apartments, meters, user_roles, readings tables
+  - Repository layer: base.py, users.py, apartments.py, roles.py, readings.py, meters.py (CRUD operations + domain-specific queries)
+  - DatabaseManager created (bot/database.py) with connection pooling
+  - tests/test_repositories.py: 8/8 tests passing, validates all repository classes
 - Dependencies: T-001
-- Notes: Use SQLAlchemy Core for queries
+- Notes: SQLAlchemy Core used for queries; repos include privilege-scoped role logic; connection pooling configured for RDS
 
 ## T-003 — Implement core PTB skeleton
 - Owner: Developer
-- Status: ⚪ 0% | Dates: planned start 2026-04-03, expected by 2026-04-04
+- Status: 🔵 50% | Dates: started 2026-04-03, expected by 2026-04-04, last touched 2026-04-03
 - Scope: scope.md § Phased Scope Phase 1
-- Design: design.md § Architecture Overview
+- Design: design.md § Menu Structure, Architecture Overview
 - Acceptance criteria:
-  - main.py created with PTB Application and polling setup
-  - /start command handler implemented with inline button menu
-  - Basic error handling and logging configured
-  - Bot responds to /start with role selection buttons
-- Evidence: Will be added when started
-- Dependencies: T-001
-- Notes: Use async PTB v20+
+  - main.py created with PTB Application and polling setup ✅
+  - /start command handler checks user roles and DB existence ✅ (partial — DB integration pending T-002)
+  - Role-based menu function returns correct inline buttons per role (Tenant, Grayhound, Administrator, New User) ⏳
+  - Menu for new users: "Request Meter Submeeting", "About Bot" ⏳
+  - Menu for Tenant: "Submit Reading", "View Own Readings/Chart", "Request Meter Submeeting", "About Bot" ⏳
+  - Menu for Grayhound: "Submit Reading", "Export Readings (CSV)", "View Readings/Chart", "Request Meter Submeeting", "About Bot" ⏳
+  - Menu for Administrator: "Submit Reading", "Export Readings (CSV)", "View Own Readings/Chart", "Requests", "Assign/Revoke Roles", "Add/Deactivate Users", "Manage Apartment List", "About Bot" ⏳
+  - Error handler logs and responds gracefully to exceptions ✅
+  - Basic logging configured ✅
+- Evidence: main.py updated with error handler, role keyboard, polling setup; handler stubs created; tests/test_main.py with role-based tests
+- Dependencies: T-001, T-002 (for user/role DB queries)
+- Notes: Menu structure from design.md §Menu Structure; role checks at /start time; highest-privilege role menu wins if user has multiple roles
 
 ## T-004 — Implement user role management
 - Owner: Developer
-- Status: ⚪ 0% | Dates: planned start 2026-04-04, expected by 2026-04-05
+- Status: ⚪ 0% | Dates: planned start 2026-04-04, expected by 2026-04-05, last touched 2026-04-03
 - Scope: scope.md § Phased Scope Phase 1
-- Design: design.md § Project Structure (handlers/admin.py)
+- Design: design.md § Project Structure (handlers/admin.py), Role Permission Matrix
 - Acceptance criteria:
-  - Administrator can assign roles (Tenant, Grayhound) to users with start/end dates
-  - Role assignment stored in database with validity periods
-  - Admin UI via inline buttons to manage users and roles
-  - Role checks implemented in handlers
+  - Repository layer for user_roles table created (CRUD for role assignments)
+  - Administrator can assign/revoke roles (inline button flow)
+  - Role validity periods enforced (valid_from, valid_to)
+  - Tenant role assignment scoped to apartment_id
+  - Role checks in /start determine correct menu per user
+  - Highest-privilege role menu wins if user has multiple roles
 - Evidence: Will be added when started
 - Dependencies: T-002, T-003
-- Notes: Roles scoped to time periods
+- Notes: Roles scoped to time periods; role checks at request time
 
 ## T-005 — Implement tenant meter reading flow
 - Owner: Developer
