@@ -12,6 +12,7 @@ dependencies = [
     "python-telegram-bot[all]>=20.0",
     "tortoise-orm>=0.20.0",
     "asyncpg>=0.28.0",
+    "python-dotenv>=1.0.0",
     "pytest>=7.0",
     "pytest-asyncio",
     "ruff",

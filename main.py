@@ -7,7 +7,7 @@ Menu structure per design.md § Menu Structure.
 
 import logging
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
