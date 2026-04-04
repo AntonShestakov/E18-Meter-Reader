@@ -3,7 +3,7 @@
 ## Context Snapshot
 - Project initialized with Phase 1 MVP tasks defined in tracker.md
 - Basic project structure created: bot/handlers/, bot/services/, bot/repositories/, migrations/, tests/
-- Python virtual environment set up with core dependencies installed (PTB, SQLAlchemy, pytest, etc.)
+- Python virtual environment set up with core dependencies installed (PTB, Tortoise ORM, asyncpg, pytest, etc.)
 - Basic bot skeleton implemented in main.py with /start command
 
 ## Active Task(s)
@@ -11,7 +11,7 @@
 
 ## Decisions Made
 - Used pyproject.toml for modern Python packaging — design.md § Tech Stack
-- Adopted SQLAlchemy Core for DB access — design.md § Tech Stack
+- Adopted Tortoise ORM for async DB access — design.md § Tech Stack
 
 ## Changes Since Last Session
 - docs/tracker.md (200+ LOC): Created with 8 Phase 1 tasks
@@ -22,7 +22,7 @@
 
 ## Validation & Evidence
 - Unit: N/A (no tests yet) — Integration: N/A — Coverage: N/A
-- Imports: PTB and SQLAlchemy import successfully
+- Imports: PTB and Tortoise ORM import successfully
 - Structure: All required directories created
 
 ## Risks & Unknowns

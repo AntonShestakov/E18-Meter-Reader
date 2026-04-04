@@ -51,7 +51,7 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 - Design: design.md § Project Structure
 - Acceptance criteria:
   - Project folder structure created: bot/handlers/, bot/services/, bot/repositories/, migrations/, tests/
-  - pyproject.toml created with python-telegram-bot, pytest, ruff, black, sqlalchemy, psycopg2, flyway (or equivalent)
+  - pyproject.toml created with python-telegram-bot, pytest, ruff, black, tortoise-orm, asyncpg, flyway (or equivalent)
   - Python virtual environment configured and activated
   - Basic dependencies installed and importable
 - Evidence: Project structure created, pyproject.toml added, venv activated, imports successful
@@ -78,7 +78,7 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
   - DatabaseManager created (bot/database.py) with connection pooling
   - tests/test_repositories.py: 8/8 tests passing, validates all repository classes
 - Dependencies: T-001
-- Notes: SQLAlchemy Core used for queries; repos include privilege-scoped role logic; connection pooling configured for RDS
+- Notes: Tortoise ORM used for async queries; repos include privilege-scoped role logic; async connection pooling configured for RDS
 
 ## T-003 — Implement core PTB skeleton
 - Owner: Developer

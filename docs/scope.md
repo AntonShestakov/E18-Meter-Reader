@@ -122,7 +122,7 @@ Three user roles exist: **Administrator** (manages accounts and role assignments
 - **Telegram API rate limits** → Mitigation: implement retry/backoff; stay within 30 messages/second per bot limit
 - **OCR accuracy for meter photos** → Mitigation: Phase 2 feature; validate with real meter images before committing to library; provide manual fallback
 - **AWS cost overruns** → Mitigation: use t3.micro EC2 and db.t3.micro RDS in UAT; set billing alerts
-- **RDS connection management in polling bot** → Mitigation: use connection pooling (e.g., psycopg2 pool or SQLAlchemy); validate under load
+- **RDS connection management in polling bot** → Mitigation: use async connection pooling (Tortoise ORM built-in); validate under load
 - **Solo developer bottleneck** → Mitigation: keep slices small (≤ 1 day), strict DoD, frequent handoff.md updates to preserve context
 - **Scope creep into multi-building or notification features** → Mitigation: explicit Out of Scope section; revisit only after Phase 3 is complete
 

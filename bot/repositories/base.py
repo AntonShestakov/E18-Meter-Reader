@@ -1,96 +1,76 @@
 """
-Base repository class for database access.
-Uses SQLAlchemy Core for queries.
+Base repository class for Tortoise ORM models.
+Provides common async CRUD operations.
 """
 
-from typing import Optional, List, Any
-from sqlalchemy import create_engine, MetaData, Table, select, insert, update, delete
-from sqlalchemy.engine import Engine
-from sqlalchemy.exc import SQLAlchemyError
 import logging
+from typing import List, Optional, TypeVar, Generic
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar('T')
 
-class BaseRepository:
-    """Base class for all repositories with common CRUD operations."""
+
+class BaseRepository(Generic[T]):
+    """Base repository with common async CRUD operations."""
     
-    def __init__(self, engine: Engine, metadata: MetaData, table_name: str):
+    def __init__(self, model):
         """
         Initialize repository.
         
         Args:
-            engine: SQLAlchemy engine
-            metadata: SQLAlchemy metadata object
-            table_name: Name of the table this repository manages
+            model: Tortoise ORM Model class
         """
-        self.engine = engine
-        self.metadata = metadata
-        self.table: Table = metadata.tables[table_name]
+        self.model = model
     
-    def insert(self, values: dict) -> Optional[Any]:
-        """
-        Insert a row into the table.
-        
-        Args:
-            values: Dictionary of column names to values
-        
-        Returns:
-            Result of insert operation
-        """
+    async def create(self, **kwargs) -> T:
+        """Create and return a new record."""
         try:
-            stmt = insert(self.table).values(**values)
-            with self.engine.begin() as conn:
-                result = conn.execute(stmt)
-                conn.commit()
-            logger.info(f"Inserted row into {self.table.name}: {values}")
-            return result
-        except SQLAlchemyError as e:
-            logger.error(f"Error inserting into {self.table.name}: {e}")
+            instance = await self.model.create(**kwargs)
+            logger.info(f"Created {self.model.__name__}: {instance}")
+            return instance
+        except Exception as e:
+            logger.error(f"Error creating {self.model.__name__}: {e}")
             raise
     
-    def select_by_id(self, row_id: int) -> Optional[dict]:
-        """Select a row by ID."""
+    async def get_by_id(self, id) -> Optional[T]:
+        """Get record by ID."""
         try:
-            stmt = select(self.table).where(self.table.c.id == row_id)
-            with self.engine.connect() as conn:
-                result = conn.execute(stmt).fetchone()
-            return dict(result._mapping) if result else None
-        except SQLAlchemyError as e:
-            logger.error(f"Error selecting from {self.table.name}: {e}")
+            return await self.model.get_or_none(id=id)
+        except Exception as e:
+            logger.error(f"Error getting {self.model.__name__} by id {id}: {e}")
             raise
     
-    def select_all(self) -> List[dict]:
-        """Select all rows from the table."""
+    async def get_all(self) -> List[T]:
+        """Get all records."""
         try:
-            stmt = select(self.table)
-            with self.engine.connect() as conn:
-                results = conn.execute(stmt).fetchall()
-            return [dict(row._mapping) for row in results]
-        except SQLAlchemyError as e:
-            logger.error(f"Error selecting all from {self.table.name}: {e}")
+            return await self.model.all()
+        except Exception as e:
+            logger.error(f"Error getting all {self.model.__name__}: {e}")
             raise
     
-    def update_by_id(self, row_id: int, values: dict) -> None:
-        """Update a row by ID."""
+    async def update(self, id, **kwargs) -> Optional[T]:
+        """Update record by ID."""
         try:
-            stmt = update(self.table).where(self.table.c.id == row_id).values(**values)
-            with self.engine.begin() as conn:
-                conn.execute(stmt)
-                conn.commit()
-            logger.info(f"Updated row {row_id} in {self.table.name}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating {self.table.name}: {e}")
+            instance = await self.get_by_id(id)
+            if not instance:
+                return None
+            await instance.update_from_dict(kwargs)
+            await instance.save()
+            logger.info(f"Updated {self.model.__name__} {id}")
+            return instance
+        except Exception as e:
+            logger.error(f"Error updating {self.model.__name__}: {e}")
             raise
     
-    def delete_by_id(self, row_id: int) -> None:
-        """Delete a row by ID."""
+    async def delete(self, id) -> bool:
+        """Delete record by ID."""
         try:
-            stmt = delete(self.table).where(self.table.c.id == row_id)
-            with self.engine.begin() as conn:
-                conn.execute(stmt)
-                conn.commit()
-            logger.info(f"Deleted row {row_id} from {self.table.name}")
-        except SQLAlchemyError as e:
-            logger.error(f"Error deleting from {self.table.name}: {e}")
+            deleted = await self.model.filter(id=id).delete()
+            if deleted:
+                logger.info(f"Deleted {self.model.__name__} {id}")
+            return bool(deleted)
+        except Exception as e:
+            logger.error(f"Error deleting {self.model.__name__}: {e}")
             raise
+

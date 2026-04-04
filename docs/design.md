@@ -105,7 +105,7 @@ A template `.env.example` is provided in the repository with placeholder values 
 | Language | Python 3.11+ | PTB library ecosystem, OCR libraries, broad community |
 | Bot framework | `python-telegram-bot` v20+ (async) | Mature, well-documented, native async support |
 | Database | PostgreSQL 15 | Same engine in DEV and PROD; strong JSON support for future flexibility |
-| ORM / DB access | SQLAlchemy 2.x (Core or ORM, TBD) + psycopg2 | Standard Python PostgreSQL stack |
+| ORM / DB access | Tortoise ORM (async) + asyncpg | Async Python PostgreSQL stack, native async support for PTB |
 | DB migrations | Flyway | SQL-first migrations, easy CI/CD integration |
 | Charts | TBD (Phase 2) — candidates: `matplotlib`, `plotly` | Decision deferred; output must be a PNG sent via Telegram `sendPhoto` |
 | OCR | TBD (Phase 2) — candidates: Tesseract, Google Cloud Vision, OpenAI Vision API | Decision deferred; accuracy on meter photos to be evaluated |
