@@ -31,10 +31,10 @@ async def test_start_command_calls_reply_text():
 
 def test_create_new_user_menu():
     """Test menu for new user (no roles assigned)."""
-    from main import create_menu_for_role
+    from bot.keyboards import build_main_menu_for_role
 
     # New user should see: "Request for Meter Submeeting", "About Bot"
-    keyboard = create_menu_for_role(role=None)
+    keyboard = build_main_menu_for_role(role=None)
 
     assert isinstance(keyboard, InlineKeyboardMarkup)
     buttons_text = []
@@ -52,10 +52,10 @@ def test_create_new_user_menu():
 
 def test_create_tenant_menu():
     """Test menu for Tenant role per design.md."""
-    from main import create_menu_for_role
+    from bot.keyboards import build_main_menu_for_role
 
     # Tenant should see: Submit Reading, View Own Readings/Chart, Request for Meter Submeeting, About Bot
-    keyboard = create_menu_for_role(role="tenant")
+    keyboard = build_main_menu_for_role(role="tenant")
 
     assert isinstance(keyboard, InlineKeyboardMarkup)
     buttons_text = []
@@ -72,11 +72,11 @@ def test_create_tenant_menu():
 
 def test_create_grayhound_menu():
     """Test menu for Grayhound role per design.md."""
-    from main import create_menu_for_role
+    from bot.keyboards import build_main_menu_for_role
 
     # Grayhound should see: Submit Reading, Export Readings (CSV), View Readings/Chart,
     # Request for Meter Submeeting, About Bot
-    keyboard = create_menu_for_role(role="grayhound")
+    keyboard = build_main_menu_for_role(role="grayhound")
 
     assert isinstance(keyboard, InlineKeyboardMarkup)
     buttons_text = []
@@ -93,11 +93,11 @@ def test_create_grayhound_menu():
 
 def test_create_administrator_menu():
     """Test menu for Administrator role per design.md."""
-    from main import create_menu_for_role
+    from bot.keyboards import build_main_menu_for_role
 
     # Administrator should see: Submit Reading, Export Readings (CSV), View Own Readings/Chart,
     # Requests, Assign/Revoke Roles, Add/Deactivate Users, Manage Apartment List, About Bot
-    keyboard = create_menu_for_role(role="administrator")
+    keyboard = build_main_menu_for_role(role="administrator")
 
     assert isinstance(keyboard, InlineKeyboardMarkup)
     buttons_text = []
@@ -122,11 +122,11 @@ def test_create_administrator_menu():
 
 def test_highest_privilege_role_menu_wins():
     """Test that administrator menu is shown if user has multiple roles."""
-    from main import create_menu_for_role
+    from bot.keyboards import build_main_menu_for_role
 
     # When user has both administrator and grayhound roles,
     # administrator menu (highest privilege) should be returned
-    keyboard = create_menu_for_role(role="administrator")
+    keyboard = build_main_menu_for_role(role="administrator")
     buttons_text = []
     for row in keyboard.inline_keyboard:
         for btn in row:

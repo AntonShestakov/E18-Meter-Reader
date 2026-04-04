@@ -7,10 +7,11 @@ Menu structure per design.md § Menu Structure.
 
 import logging
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
 from bot import texts
+from bot.keyboards import build_main_menu_for_role
 
 # Configure logging
 logging.basicConfig(
@@ -30,131 +31,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             logger.error(f"Failed to send error message: {e}")
 
 
-def create_menu_for_role(role: str = None) -> InlineKeyboardMarkup:
-    """
-    Create role-based menu per design.md § Menu Structure.
-
-    Args:
-        role: User role ('tenant', 'grayhound', 'administrator', or None for new user)
-
-    Returns:
-        InlineKeyboardMarkup with role-appropriate buttons
-
-    Notes:
-        - New user (role=None): Request for Meter Submeeting, About Bot
-        - Tenant: Submit Reading, View Own Readings/Chart, Request for Meter Submeeting, About Bot
-        - Grayhound: Submit Reading, Export Readings (CSV), View Readings/Chart, Request for Meter Submeeting, About Bot
-        - Administrator: Submit Reading, Export Readings (CSV), View Own Readings/Chart, Requests,
-                         Assign/Revoke Roles, Add/Deactivate Users, Manage Apartment List, About Bot
-    """
-
-    keyboard = []
-
-    if role is None:
-        # New user menu (no roles assigned)
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_REQUEST_SUBMEETING,
-                    callback_data="request_submeeting",
-                )
-            ],
-            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
-        ]
-
-    elif role == "tenant":
-        # Tenant menu
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_VIEW_OWN_READINGS, callback_data="view_own_readings"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_REQUEST_SUBMEETING,
-                    callback_data="request_submeeting",
-                )
-            ],
-            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
-        ]
-
-    elif role == "grayhound":
-        # Grayhound menu
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_EXPORT_CSV, callback_data="export_readings"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_REQUEST_SUBMEETING,
-                    callback_data="request_submeeting",
-                )
-            ],
-            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
-        ]
-
-    elif role == "administrator":
-        # Administrator menu (highest privilege)
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_EXPORT_CSV, callback_data="export_readings"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_VIEW_OWN_READINGS, callback_data="view_own_readings"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_REQUESTS, callback_data="view_requests"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_ASSIGN_ROLES, callback_data="manage_roles"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_MANAGE_USERS, callback_data="manage_users"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    texts.BUTTON_MANAGE_APARTMENTS, callback_data="manage_apartments"
-                )
-            ],
-            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
-        ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle the /start command.
@@ -169,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # TODO: Replace with actual DB user/role lookup
     user_role = None  # Placeholder: will be replaced with DB query
 
-    menu = create_menu_for_role(role=user_role)
+    menu = build_main_menu_for_role(role=user_role)
 
     await update.message.reply_text(texts.START_MESSAGE, reply_markup=menu)
 

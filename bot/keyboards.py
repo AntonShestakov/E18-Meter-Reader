@@ -42,7 +42,7 @@ def build_main_menu_for_role(role: Optional[str]) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
+                    texts.BUTTON_VIEW_OWN_READINGS, callback_data="view_own_readings"
                 )
             ],
             [
@@ -84,7 +84,7 @@ def build_main_menu_for_role(role: Optional[str]) -> InlineKeyboardMarkup:
             [InlineKeyboardButton(texts.BUTTON_EXPORT_CSV, callback_data="export_csv")],
             [
                 InlineKeyboardButton(
-                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
+                    texts.BUTTON_VIEW_OWN_READINGS, callback_data="view_own_readings"
                 )
             ],
             [
