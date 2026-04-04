@@ -10,6 +10,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
+from bot import texts
 
 # Configure logging
 logging.basicConfig(
@@ -24,9 +25,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if isinstance(update, Update) and update.effective_message:
         try:
-            await update.effective_message.reply_text(
-                "An error occurred while processing your request. Please try again."
-            )
+            await update.effective_message.reply_text(texts.UNEXPECTED_ERROR)
         except TelegramError as e:
             logger.error(f"Failed to send error message: {e}")
 
@@ -56,85 +55,101 @@ def create_menu_for_role(role: str = None) -> InlineKeyboardMarkup:
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "📋 Request for Meter Submeeting",
+                    texts.BUTTON_REQUEST_SUBMEETING,
                     callback_data="request_submeeting",
                 )
             ],
-            [InlineKeyboardButton("ℹ️ About Bot", callback_data="about_bot")],
+            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
         ]
 
     elif role == "tenant":
         # Tenant menu
         keyboard = [
-            [InlineKeyboardButton("📊 Submit Reading", callback_data="submit_reading")],
             [
                 InlineKeyboardButton(
-                    "📈 View Own Readings / Chart", callback_data="view_own_readings"
+                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "📋 Request for Meter Submeeting",
+                    texts.BUTTON_VIEW_OWN_READINGS, callback_data="view_own_readings"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_REQUEST_SUBMEETING,
                     callback_data="request_submeeting",
                 )
             ],
-            [InlineKeyboardButton("ℹ️ About Bot", callback_data="about_bot")],
+            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
         ]
 
     elif role == "grayhound":
         # Grayhound menu
         keyboard = [
-            [InlineKeyboardButton("📊 Submit Reading", callback_data="submit_reading")],
             [
                 InlineKeyboardButton(
-                    "📥 Export Readings (CSV)", callback_data="export_readings"
+                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "📈 View Readings / Chart", callback_data="view_readings"
+                    texts.BUTTON_EXPORT_CSV, callback_data="export_readings"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "📋 Request for Meter Submeeting",
+                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_REQUEST_SUBMEETING,
                     callback_data="request_submeeting",
                 )
             ],
-            [InlineKeyboardButton("ℹ️ About Bot", callback_data="about_bot")],
+            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
         ]
 
     elif role == "administrator":
         # Administrator menu (highest privilege)
         keyboard = [
-            [InlineKeyboardButton("📊 Submit Reading", callback_data="submit_reading")],
             [
                 InlineKeyboardButton(
-                    "📥 Export Readings (CSV)", callback_data="export_readings"
+                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "📈 View Own Readings / Chart", callback_data="view_own_readings"
-                )
-            ],
-            [InlineKeyboardButton("📬 Requests", callback_data="view_requests")],
-            [
-                InlineKeyboardButton(
-                    "👥 Assign / Revoke Roles", callback_data="manage_roles"
+                    texts.BUTTON_EXPORT_CSV, callback_data="export_readings"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "➕ Add / Deactivate Users", callback_data="manage_users"
+                    texts.BUTTON_VIEW_OWN_READINGS, callback_data="view_own_readings"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "🏠 Manage Apartment List", callback_data="manage_apartments"
+                    texts.BUTTON_REQUESTS, callback_data="view_requests"
                 )
             ],
-            [InlineKeyboardButton("ℹ️ About Bot", callback_data="about_bot")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_ASSIGN_ROLES, callback_data="manage_roles"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_MANAGE_USERS, callback_data="manage_users"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_MANAGE_APARTMENTS, callback_data="manage_apartments"
+                )
+            ],
+            [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about_bot")],
         ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -156,10 +171,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     menu = create_menu_for_role(role=user_role)
 
-    await update.message.reply_text(
-        "Welcome to E18 Meter Reader Bot!\n\n" "Please select an option below.",
-        reply_markup=menu,
-    )
+    await update.message.reply_text(texts.START_MESSAGE, reply_markup=menu)
 
 
 async def post_init(application: Application) -> None:

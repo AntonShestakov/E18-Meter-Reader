@@ -37,14 +37,14 @@ Would you like to request access?
 
 # Button Labels
 BUTTON_SUBMIT_READING = "📊 Submit Reading"
-BUTTON_VIEW_READINGS = "📈 View Readings"
-BUTTON_VIEW_CHART = "📉 View Chart"
-BUTTON_EXPORT_CSV = "📥 Export (CSV)"
-BUTTON_REQUEST_SUBMEETING = "📝 Request Submeeting"
-BUTTON_ASSIGN_ROLES = "👥 Assign/Revoke Roles"
-BUTTON_MANAGE_USERS = "🔐 Manage Users"
-BUTTON_MANAGE_APARTMENTS = "🏢 Manage Apartments"
-BUTTON_REQUESTS = "📋 View Requests"
+BUTTON_VIEW_READINGS = "📈 View Readings / Chart"
+BUTTON_VIEW_OWN_READINGS = "📈 View Own Readings / Chart"
+BUTTON_EXPORT_CSV = "📥 Export Readings (CSV)"
+BUTTON_REQUEST_SUBMEETING = "📋 Request for Meter Submeeting"
+BUTTON_ASSIGN_ROLES = "👥 Assign / Revoke Roles"
+BUTTON_MANAGE_USERS = "➕ Add / Deactivate Users"
+BUTTON_MANAGE_APARTMENTS = "🏠 Manage Apartment List"
+BUTTON_REQUESTS = "📬 Requests"
 BUTTON_ABOUT = "ℹ️ About Bot"
 
 # Numeric Pad
