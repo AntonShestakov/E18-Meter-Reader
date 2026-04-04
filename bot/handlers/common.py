@@ -13,10 +13,12 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot import texts, keyboards
+from bot.handlers.decorators import log_handler
 
 logger = logging.getLogger(__name__)
 
 
+@log_handler()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /start command — display welcome message and role-based menu.
@@ -42,6 +44,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+@log_handler()
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /help command — display help message.
@@ -49,6 +52,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(texts.HELP_MESSAGE)
 
 
+@log_handler()
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /cancel command — cancel current operation and return to main menu.
@@ -60,6 +64,7 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
 
+@log_handler(include_context=False)
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle errors during bot operation.

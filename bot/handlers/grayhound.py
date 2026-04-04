@@ -5,7 +5,10 @@ Grayhound (building manager) role handlers for E18 Meter Reader Bot.
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from bot.handlers.decorators import log_handler
 
+
+@log_handler()
 async def grayhound_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display grayhound menu."""
     # TODO: Implement grayhound menu with buttons for:

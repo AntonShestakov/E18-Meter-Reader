@@ -147,6 +147,30 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 - Dependencies: T-001 (project structure)
 - Notes: Provides automated quality gates; integrates with git hooks; manual runs also supported via scripts/pre-commit.ps1
 
+## T-003d — Implement handler logging decorator
+- Owner: Developer
+- Status: ✅ 100% | Dates: started 2026-04-03, expected by 2026-04-03, last touched 2026-04-03
+- Scope: scope.md § Quality Assurance, Monitoring
+- Design: design.md § Handler Logging & Observability
+- Acceptance criteria:
+  - `bot/handlers/decorators.py` created with `@log_handler` decorator ✅
+  - Decorator logs handler name, start/end events, execution duration ✅
+  - Decorator extracts and logs user/chat info from Update (user_id, username, chat_id, message_text, callback_data) ✅
+  - Decorator logs Context data optionally (include_context parameter) ✅
+  - Decorator logs full exception traceback on error ✅
+  - Decorator applied to all handlers: common.py (start, help_command, cancel_command, error_handler) ✅
+  - Decorator applied to role-based handler stubs: admin.py, tenant.py, grayhound.py ✅
+  - All tests passing (6/6 main tests, 17/17 pre-commit tests) ✅
+  - Design documentation added with usage examples ✅
+- Evidence:
+  - `bot/handlers/decorators.py` created (100+ lines) with _extract_user_info helper function
+  - Decorator parameters: include_context (bool, default False), include_update (bool, default True)
+  - Applied to 7 handlers across 4 files with appropriate settings (error_handler uses include_context=False)
+  - All tests passing: pytest 6/6, pre-commit 7/7 hooks
+  - Documentation section added to design.md § Handler Logging & Observability with examples
+- Dependencies: T-001, T-003b (handlers exist)
+- Notes: Provides observability for all handler execution; produces structured logs for debugging and monitoring; no sensitive data logged by default
+
 ## T-004 — Implement user role management
 - Owner: Developer
 - Status: ⚪ 0% | Dates: planned start 2026-04-05, expected by 2026-04-06, last touched 2026-04-03

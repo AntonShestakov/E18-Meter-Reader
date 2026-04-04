@@ -440,6 +440,79 @@ To be delivered
 
 ---
 
+## Handler Logging & Observability
+
+### `@log_handler` Decorator
+
+All Telegram bot handlers use the `@log_handler()` decorator from `bot/handlers/decorators.py` to provide comprehensive observability.
+
+**Decorator Location:** `bot/handlers/decorators.py`
+
+**Decorator Features:**
+
+The `@log_handler()` decorator automatically logs:
+
+1. **Handler execution events:**
+   - Handler name (function name)
+   - Start event with timestamp
+   - End event with execution duration (ms)
+   - Result or error status
+
+2. **User/Chat information** (extracted from Update):
+   - `user_id` — Telegram user ID
+   - `username` — Telegram username
+   - `first_name`, `last_name` — User display name
+   - `chat_id`, `chat_type` — Chat metadata
+   - `message_text` — First 50 chars of message (for truncation)
+   - `callback_data` — Inline button callback ID (for debugging)
+
+3. **Context information** (optional):
+   - `user_data` — Conversation state dictionary
+   - `chat_data` — Chat-scoped state
+   - `args` — Command args (if present)
+
+4. **Error handling:**
+   - Full exception traceback logged on error
+   - Handler name, execution duration, exception type, and message included in error log
+
+**Usage:**
+
+```python
+from bot.handlers.decorators import log_handler
+
+@log_handler()  # Default: log Update data
+async def my_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Hello!")
+
+@log_handler(include_context=True)  # Also log Context (use with caution)
+async def admin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    pass
+
+@log_handler(include_context=False, include_update=False)  # Minimal logging
+async def simple_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    pass
+```
+
+**Parameters:**
+- `include_context` (bool, default False): If True, logs Context details (user_data, chat_data, args). Use sparingly to avoid logging sensitive information.
+- `include_update` (bool, default True): If True, logs extracted user/chat/message data from Update.
+
+**Log Output Example:**
+
+```
+[my_handler] START
+[my_handler] User info: {'user_id': 123456789, 'username': 'john_doe', 'chat_id': 123456789, 'chat_type': 'private'}
+[my_handler] END (duration: 0.123s, result: None)
+```
+
+**Applied Handlers:**
+- ✅ `bot/handlers/common.py`: start, help_command, cancel_command, error_handler
+- ✅ `bot/handlers/admin.py`: admin_menu
+- ✅ `bot/handlers/tenant.py`: tenant_menu
+- ✅ `bot/handlers/grayhound.py`: grayhound_menu
+
+---
+
 ## Configuration
 
 All configuration via environment variables. Never hardcoded.
@@ -479,10 +552,11 @@ Local development uses a `.env` file (git-ignored). UAT/PROD use AWS SSM Paramet
 - ✅ `bot/services/export.py` — ExportService (CSV export, role-based filtering)
 
 **Handlers Layer:**
-- ✅ `bot/handlers/common.py` — Shared handlers (/start, /help, /cancel, errors)
-- 🔵 `bot/handlers/admin.py` — Administrator-only flows (stub)
-- 🔵 `bot/handlers/tenant.py` — Tenant flows (stub)
-- 🔵 `bot/handlers/grayhound.py` — Grayhound flows (stub)
+- ✅ `bot/handlers/common.py` — Shared handlers (/start, /help, /cancel, errors) with @log_handler decorator
+- ✅ `bot/handlers/decorators.py` — Handler logging decorator with user/chat extraction and context logging (100 lines)
+- 🔵 `bot/handlers/admin.py` — Administrator-only flows (stub with @log_handler)
+- 🔵 `bot/handlers/tenant.py` — Tenant flows (stub with @log_handler)
+- 🔵 `bot/handlers/grayhound.py` — Grayhound flows (stub with @log_handler)
 
 **UI & Configuration:**
 - ✅ `bot/texts.py` — All user-facing strings (messages, button labels, prompts)
