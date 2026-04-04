@@ -25,23 +25,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     Flow:
     1. Check if user exists in database
-    2. If new user: display new user menu (request access)
+    2. If new user: register user, display new user menu
     3. If existing: query active roles and show appropriate menu
     4. Highest privilege role menu wins if multiple roles
     """
     user = update.effective_user
     logger.info(f"User {user.id} ({user.username}) started bot")
 
-    # TODO: Query database for user roles
-    # For now, use None (new user menu)
-    role = None
+    try:
+        # Get services from application context
+        users_repo = context.bot_data.get("users_repo")
+        role_service = context.bot_data.get("role_service")
 
-    menu_keyboard = keyboards.build_main_menu_for_role(role)
+        if not users_repo or not role_service:
+            logger.error("Database services not initialized")
+            await update.message.reply_text(texts.UNEXPECTED_ERROR)
+            return
 
-    await update.message.reply_text(
-        texts.START_MESSAGE,
-        reply_markup=menu_keyboard,
-    )
+        # Check if user exists
+        existing_user = await users_repo.get_by_telegram_id(user.id)
+        if not existing_user:
+            # Create new user
+            await users_repo.create_user(
+                user_id=user.id,
+                username=user.username,
+                full_name=user.first_name,
+            )
+            logger.info(f"New user registered: {user.id} ({user.username})")
+            role = None  # New user has no role
+        else:
+            # Get highest privilege role for existing user
+            role = await role_service.get_highest_privilege_role(user.id)
+            logger.info(f"User {user.id} has role: {role}")
+
+        # Build and display menu based on role
+        menu_keyboard = keyboards.build_main_menu_for_role(role)
+
+        await update.message.reply_text(
+            texts.START_MESSAGE,
+            reply_markup=menu_keyboard,
+        )
+
+    except Exception as e:
+        logger.error(f"Error in start handler: {e}", exc_info=True)
+        await update.message.reply_text(texts.UNEXPECTED_ERROR)
 
 
 @log_handler()
@@ -57,7 +84,18 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     """
     /cancel command — cancel current operation and return to main menu.
     """
-    menu_keyboard = keyboards.build_main_menu_for_role(None)  # TODO: Get actual role
+    user = update.effective_user
+    role = None
+
+    try:
+        # Try to get user's actual role
+        role_service = context.bot_data.get("role_service")
+        if role_service:
+            role = await role_service.get_highest_privilege_role(user.id)
+    except Exception as e:
+        logger.warning(f"Failed to get role for user {user.id}: {e}")
+
+    menu_keyboard = keyboards.build_main_menu_for_role(role)
     await update.message.reply_text(
         "Cancelled. Back to main menu:",
         reply_markup=menu_keyboard,

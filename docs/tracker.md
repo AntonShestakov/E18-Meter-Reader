@@ -64,40 +64,46 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 
 ## T-002 — Design and implement database schema
 - Owner: Developer
-- Status: 🔵 50% | Dates: started 2026-04-02, expected by 2026-04-03, last touched 2026-04-03
+- Status: ✅ 100% | Dates: started 2026-04-02, expected by 2026-04-03, last touched 2026-04-03
 - Scope: scope.md § Phased Scope Phase 1
 - Design: design.md § Tech Stack (PostgreSQL, Flyway), Data Model
 - Acceptance criteria:
   - Flyway migration scripts created for tables: users, roles, role_assignments, readings ✅
   - Schema supports three roles with time-scoped assignments ✅
-  - Local PostgreSQL database set up and migrations applied (pending local DB setup)
+  - Local PostgreSQL database set up and migrations applied ✅
   - Basic repository layer classes created for DB access ✅
 - Evidence:
   - migrations/V1__initial_schema.sql created with users, apartments, meters, user_roles, readings tables
   - Repository layer: base.py, users.py, apartments.py, roles.py, readings.py, meters.py (CRUD operations + domain-specific queries)
   - DatabaseManager created (bot/database.py) with connection pooling
   - tests/test_repositories.py: 8/8 tests passing, validates all repository classes
+  - Local PostgreSQL running and migrations applied successfully
 - Dependencies: T-001
 - Notes: Tortoise ORM used for async queries; repos include privilege-scoped role logic; async connection pooling configured for RDS
 
 ## T-003 — Implement core PTB skeleton
 - Owner: Developer
-- Status: 🔵 50% | Dates: started 2026-04-03, expected by 2026-04-04, last touched 2026-04-03
+- Status: 🔵 75% | Dates: started 2026-04-03, expected by 2026-04-04, last touched 2026-04-03
 - Scope: scope.md § Phased Scope Phase 1
 - Design: design.md § Menu Structure, Architecture Overview
 - Acceptance criteria:
   - main.py created with PTB Application and polling setup ✅
-  - /start command handler checks user roles and DB existence ✅ (partial — DB integration pending T-002)
-  - Role-based menu function returns correct inline buttons per role (Tenant, Grayhound, Administrator, New User) ⏳
-  - Menu for new users: "Request Meter Submeeting", "About Bot" ⏳
-  - Menu for Tenant: "Submit Reading", "View Own Readings/Chart", "Request Meter Submeeting", "About Bot" ⏳
-  - Menu for Grayhound: "Submit Reading", "Export Readings (CSV)", "View Readings/Chart", "Request Meter Submeeting", "About Bot" ⏳
-  - Menu for Administrator: "Submit Reading", "Export Readings (CSV)", "View Own Readings/Chart", "Requests", "Assign/Revoke Roles", "Add/Deactivate Users", "Manage Apartment List", "About Bot" ⏳
+  - /start command handler checks user roles and DB existence ✅
+  - Role-based menu function returns correct inline buttons per role (Tenant, Grayhound, Administrator, New User) ✅
+  - Menu for new users: "Request Meter Submeeting", "About Bot" ✅
+  - Menu for Tenant: "Submit Reading", "View Own Readings/Chart", "Request Meter Submeeting", "About Bot" ✅
+  - Menu for Grayhound: "Submit Reading", "Export Readings (CSV)", "View Readings/Chart", "Request Meter Submeeting", "About Bot" ✅
+  - Menu for Administrator: "Submit Reading", "Export Readings (CSV)", "View Own Readings/Chart", "Requests", "Assign/Revoke Roles", "Add/Deactivate Users", "Manage Apartment List", "About Bot" ✅
   - Error handler logs and responds gracefully to exceptions ✅
   - Basic logging configured ✅
-- Evidence: main.py updated with error handler, role keyboard, polling setup; handler stubs created; tests/test_main.py with role-based tests
-- Dependencies: T-001, T-002 (for user/role DB queries)
-- Notes: Menu structure from design.md §Menu Structure; role checks at /start time; highest-privilege role menu wins if user has multiple roles
+- Evidence:
+  - main.py: DatabaseManager initialization, repositories and services stored in bot_data
+  - bot/handlers/common.py: start() handler now queries UsersRepository and RoleService
+  - start() creates new users in DB and retrieves highest-privilege role
+  - Role checking integrated with Tortoise ORM
+  - tests/test_main.py with role-based tests: 6/6 passing
+- Dependencies: T-001, T-002 (completed)
+- Notes: Menu structure from design.md § Menu Structure; role checks at /start time; highest-privilege role menu wins if user has multiple roles; database integration complete
 
 ## T-003b — Implement handlers and services layer
 - Owner: Developer

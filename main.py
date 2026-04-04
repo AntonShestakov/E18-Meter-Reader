@@ -12,6 +12,10 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
 from bot import texts
 from bot.handlers.common import start
+from bot.database import DatabaseManager
+from bot.repositories.users import UsersRepository
+from bot.repositories.roles import UserRolesRepository
+from bot.services.roles import RoleService
 
 # Configure logging
 logging.basicConfig(
@@ -32,8 +36,32 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def post_init(application: Application) -> None:
-    """Run on application startup."""
-    logger.info("Bot has started and is listening for commands")
+    """Run on application startup — initialize database and services."""
+    logger.info("Bot initializing...")
+
+    try:
+        # Initialize database
+        db_manager = DatabaseManager()
+        await db_manager.init()
+        logger.info("Database initialized")
+
+        # Initialize repositories
+        users_repo = UsersRepository()
+        roles_repo = UserRolesRepository()
+
+        # Initialize services
+        role_service = RoleService(roles_repo, users_repo)
+
+        # Store in application context for handler access
+        application.context_types.bot_data["db_manager"] = db_manager
+        application.context_types.bot_data["users_repo"] = users_repo
+        application.context_types.bot_data["roles_repo"] = roles_repo
+        application.context_types.bot_data["role_service"] = role_service
+
+        logger.info("Bot has started and is listening for commands")
+    except Exception as e:
+        logger.error(f"Failed to initialize bot: {e}")
+        raise
 
 
 def main() -> None:
@@ -46,6 +74,9 @@ def main() -> None:
 
     # Create application
     application = Application.builder().token(token).build()
+
+    # Initialize bot_data dictionary for storing shared resources
+    application.bot_data = {}
 
     # Set startup handler
     application.post_init = post_init
