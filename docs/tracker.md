@@ -1,7 +1,7 @@
 # tracker.md
 
-**Version:** 1.0  
-**Last updated:** 2026-04-02  
+**Version:** 1.0
+**Last updated:** 2026-04-02
 **Status:** Active task tracking — single source of truth for work items
 
 ---
@@ -14,9 +14,9 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 
 ## Status Glyphs (Use These)
 
-⚪ **Not started** — Task defined but not yet begun  
-🔵 **In progress** — Actively being worked on  
-✅ **Done** — Completed and meets acceptance criteria  
+⚪ **Not started** — Task defined but not yet begun
+🔵 **In progress** — Actively being worked on
+✅ **Done** — Completed and meets acceptance criteria
 ⚠️ **Blocked** — Cannot proceed, needs intervention
 
 ---
@@ -72,7 +72,7 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
   - Schema supports three roles with time-scoped assignments ✅
   - Local PostgreSQL database set up and migrations applied (pending local DB setup)
   - Basic repository layer classes created for DB access ✅
-- Evidence: 
+- Evidence:
   - migrations/V1__initial_schema.sql created with users, apartments, meters, user_roles, readings tables
   - Repository layer: base.py, users.py, apartments.py, roles.py, readings.py, meters.py (CRUD operations + domain-specific queries)
   - DatabaseManager created (bot/database.py) with connection pooling
@@ -115,7 +115,7 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
   - Handler callbacks wired to service methods (pending)
   - State management for multi-step flows (pending)
   - 8+ integration tests for handlers/services (pending)
-- Evidence: 
+- Evidence:
   - bot/services/reading.py created with validation/submission logic
   - bot/services/roles.py created with permission checks and privilege hierarchy
   - bot/services/export.py created with CSV generation and role-based filtering
@@ -126,9 +126,31 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 - Dependencies: T-001, T-002, T-003
 - Notes: Services follow repository pattern; handlers are thin layer over services; texts.py centralizes i18n prep
 
+## T-003c — Set up pre-commit hooks and quality gates
+- Owner: Developer
+- Status: ✅ 100% | Dates: started 2026-04-03, expected by 2026-04-03, last touched 2026-04-03
+- Scope: scope.md § Quality Assurance
+- Design: design.md § Pre-commit Hooks
+- Acceptance criteria:
+  - `.pre-commit-config.yaml` created with ruff, black, trailing whitespace, JSON/YAML checks, private key detection ✅
+  - `scripts/pre-commit.ps1` created for local pre-commit check runner ✅
+  - Pre-commit script includes ruff, black, pytest, and coverage checks ✅
+  - `tests/test_pre_commit.py` created with 13+ tests for pre-commit config validation ✅
+  - All pre-commit tests passing (13/13) ✅
+  - Documentation in design.md § Pre-commit Hooks ✅
+  - README or quick start guide updated with pre-commit instructions (pending)
+- Evidence:
+  - `.pre-commit-config.yaml` created with 5 repositories (ruff, black, pre-commit-hooks, flake8)
+  - `scripts/pre-commit.ps1` created with PowerShell hooks for Windows developers
+  - `tests/test_pre_commit.py` created with comprehensive validation (TestPreCommitConfig, TestPreCommitScript, TestChecksConfiguration, TestPreCommitIntegration)
+  - All 13 tests passing: config validity, hook definitions, CLI tool presence, framework integration
+- Dependencies: T-001 (project structure)
+- Notes: Provides automated quality gates; integrates with git hooks; manual runs also supported via scripts/pre-commit.ps1
+
 ## T-004 — Implement user role management
 - Owner: Developer
 - Status: ⚪ 0% | Dates: planned start 2026-04-05, expected by 2026-04-06, last touched 2026-04-03
+- Scope: scope.md § Phased Scope Phase 1
 - Scope: scope.md § Phased Scope Phase 1
 - Design: design.md § Project Structure (handlers/admin.py), Role Permission Matrix
 - Acceptance criteria:
@@ -210,7 +232,7 @@ This document tracks all tasks for E18-Meter-Reader, their acceptance criteria, 
 
 ## Task Numbering
 
-**Current highest number:** T-008  
+**Current highest number:** T-008
 **Next task:** T-009
 
 ---

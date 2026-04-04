@@ -66,7 +66,9 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     Logs full traceback and sends user-friendly error message.
     """
-    logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+    logger.error(
+        f"Exception while handling an update: {context.error}", exc_info=context.error
+    )
 
     if update and update.effective_message:
         try:

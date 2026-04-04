@@ -1,0 +1,48 @@
+# Pre-commit framework configuration
+# Install: pip install pre-commit
+# Setup:   pre-commit install
+# Run:     pre-commit run --all-files
+# Docs:    https://pre-commit.com/
+
+repos:
+  # Ruff: Fast Python linter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.5
+    hooks:
+      - id: ruff
+        name: Ruff linter
+        args: [--fix]
+        language_version: python3.12
+
+  # Black: Python code formatter
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        name: Black formatter
+        language_version: python3.12
+
+  # Trailing whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of file
+      - id: check-yaml
+        name: Check YAML validity
+        args: [--unsafe]
+      - id: check-json
+        name: Check JSON validity
+      - id: detect-private-key
+        name: Detect private keys
+
+  # Python syntax
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        name: Flake8 linter
+        additional_dependencies: []
+        args: ["--max-line-length=88", "--extend-ignore=E203,W503,E501"]

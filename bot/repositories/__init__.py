@@ -10,9 +10,9 @@ from .roles import UserRolesRepository
 from .readings import ReadingsRepository
 
 __all__ = [
-    'UsersRepository',
-    'ApartmentsRepository',
-    'MetersRepository',
-    'UserRolesRepository',
-    'ReadingsRepository',
+    "UsersRepository",
+    "ApartmentsRepository",
+    "MetersRepository",
+    "UserRolesRepository",
+    "ReadingsRepository",
 ]

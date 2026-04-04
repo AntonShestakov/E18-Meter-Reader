@@ -9,7 +9,7 @@ Handles:
 """
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import List, Optional, Tuple
 
 from bot.models import UserRole
@@ -98,7 +98,9 @@ class RoleService:
                 valid_to=valid_to,
                 assigned_by=assigned_by,
             )
-            logger.info(f"Role assigned: user={user_id}, role={role}, apt={apartment_id}")
+            logger.info(
+                f"Role assigned: user={user_id}, role={role}, apt={apartment_id}"
+            )
             return role_assignment
         except Exception as e:
             logger.error(f"Failed to assign role: {e}")
@@ -136,7 +138,9 @@ class RoleService:
             List of active UserRole instances
         """
         try:
-            return await self.roles_repo.get_active_roles(user_id, check_date=date.today())
+            return await self.roles_repo.get_active_roles(
+                user_id, check_date=date.today()
+            )
         except Exception as e:
             logger.error(f"Failed to fetch active roles for user {user_id}: {e}")
             raise
@@ -160,7 +164,9 @@ class RoleService:
             highest = max(active_roles, key=lambda r: ROLE_HIERARCHY.get(r.role, 0))
             return highest.role
         except Exception as e:
-            logger.error(f"Failed to determine highest privilege role for user {user_id}: {e}")
+            logger.error(
+                f"Failed to determine highest privilege role for user {user_id}: {e}"
+            )
             raise
 
     async def has_permission(self, user_id: int, required_role: str) -> bool:

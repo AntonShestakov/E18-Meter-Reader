@@ -25,36 +25,88 @@ def build_main_menu_for_role(role: Optional[str]) -> InlineKeyboardMarkup:
     if role is None:
         # New user menu
         buttons = [
-            [InlineKeyboardButton(texts.BUTTON_REQUEST_SUBMEETING, callback_data="request_submeeting")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_REQUEST_SUBMEETING, callback_data="request_submeeting"
+                )
+            ],
             [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about")],
         ]
     elif role == "tenant":
         # Tenant menu
         buttons = [
-            [InlineKeyboardButton(texts.BUTTON_SUBMIT_READING, callback_data="submit_reading")],
-            [InlineKeyboardButton(texts.BUTTON_VIEW_READINGS, callback_data="view_readings")],
-            [InlineKeyboardButton(texts.BUTTON_REQUEST_SUBMEETING, callback_data="request_submeeting")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_REQUEST_SUBMEETING, callback_data="request_submeeting"
+                )
+            ],
             [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about")],
         ]
     elif role == "grayhound":
         # Grayhound menu
         buttons = [
-            [InlineKeyboardButton(texts.BUTTON_SUBMIT_READING, callback_data="submit_reading")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
+                )
+            ],
             [InlineKeyboardButton(texts.BUTTON_EXPORT_CSV, callback_data="export_csv")],
-            [InlineKeyboardButton(texts.BUTTON_VIEW_READINGS, callback_data="view_readings")],
-            [InlineKeyboardButton(texts.BUTTON_REQUEST_SUBMEETING, callback_data="request_submeeting")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_REQUEST_SUBMEETING, callback_data="request_submeeting"
+                )
+            ],
             [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about")],
         ]
     elif role == "administrator":
         # Administrator menu (full access)
         buttons = [
-            [InlineKeyboardButton(texts.BUTTON_SUBMIT_READING, callback_data="submit_reading")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_SUBMIT_READING, callback_data="submit_reading"
+                )
+            ],
             [InlineKeyboardButton(texts.BUTTON_EXPORT_CSV, callback_data="export_csv")],
-            [InlineKeyboardButton(texts.BUTTON_VIEW_READINGS, callback_data="view_readings")],
-            [InlineKeyboardButton(texts.BUTTON_REQUESTS, callback_data="view_requests")],
-            [InlineKeyboardButton(texts.BUTTON_ASSIGN_ROLES, callback_data="assign_roles")],
-            [InlineKeyboardButton(texts.BUTTON_MANAGE_USERS, callback_data="manage_users")],
-            [InlineKeyboardButton(texts.BUTTON_MANAGE_APARTMENTS, callback_data="manage_apartments")],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_VIEW_READINGS, callback_data="view_readings"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_REQUESTS, callback_data="view_requests"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_ASSIGN_ROLES, callback_data="assign_roles"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_MANAGE_USERS, callback_data="manage_users"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    texts.BUTTON_MANAGE_APARTMENTS, callback_data="manage_apartments"
+                )
+            ],
             [InlineKeyboardButton(texts.BUTTON_ABOUT, callback_data="about")],
         ]
 
@@ -144,11 +196,12 @@ def build_apartment_selector(apartments: list) -> InlineKeyboardMarkup:
     """
     buttons = []
     for apt in apartments:
-        buttons.append([
-            InlineKeyboardButton(
-                f"Apt. {apt.number}",
-                callback_data=f"select_apartment_{apt.id}"
-            )
-        ])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    f"Apt. {apt.number}", callback_data=f"select_apartment_{apt.id}"
+                )
+            ]
+        )
     buttons.append([InlineKeyboardButton(texts.BUTTON_BACK, callback_data="menu_back")])
     return InlineKeyboardMarkup(buttons)

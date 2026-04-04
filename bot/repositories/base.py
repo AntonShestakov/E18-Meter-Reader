@@ -8,21 +8,21 @@ from typing import List, Optional, TypeVar, Generic
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseRepository(Generic[T]):
     """Base repository with common async CRUD operations."""
-    
+
     def __init__(self, model):
         """
         Initialize repository.
-        
+
         Args:
             model: Tortoise ORM Model class
         """
         self.model = model
-    
+
     async def create(self, **kwargs) -> T:
         """Create and return a new record."""
         try:
@@ -32,7 +32,7 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error creating {self.model.__name__}: {e}")
             raise
-    
+
     async def get_by_id(self, id) -> Optional[T]:
         """Get record by ID."""
         try:
@@ -40,7 +40,7 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error getting {self.model.__name__} by id {id}: {e}")
             raise
-    
+
     async def get_all(self) -> List[T]:
         """Get all records."""
         try:
@@ -48,7 +48,7 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error getting all {self.model.__name__}: {e}")
             raise
-    
+
     async def update(self, id, **kwargs) -> Optional[T]:
         """Update record by ID."""
         try:
@@ -62,7 +62,7 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error updating {self.model.__name__}: {e}")
             raise
-    
+
     async def delete(self, id) -> bool:
         """Delete record by ID."""
         try:
@@ -73,4 +73,3 @@ class BaseRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error deleting {self.model.__name__}: {e}")
             raise
-

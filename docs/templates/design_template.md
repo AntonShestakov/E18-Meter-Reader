@@ -1,8 +1,8 @@
 # design.md
 
-**Version:** 1.0  
-**Last updated:** YYYY-MM-DD  
-**Status:** Living document — updated as architecture evolves  
+**Version:** 1.0
+**Last updated:** YYYY-MM-DD
+**Status:** Living document — updated as architecture evolves
 **Authority:** Technical decisions source of truth; must align with `scope.md`
 
 ---
@@ -716,7 +716,7 @@ HTTP/1.1 429 Too Many Requests
 ```markdown
 ### 8.X ADR-XXX: [Decision Title]
 
-**Date:** YYYY-MM-DD  
+**Date:** YYYY-MM-DD
 **Status:** [Proposed | Accepted | Deprecated | Superseded by ADR-YYY]
 
 **Context:**

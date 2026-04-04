@@ -513,6 +513,66 @@ Local development uses a `.env` file (git-ignored). UAT/PROD use AWS SSM Paramet
 
 ---
 
+## Pre-commit Hooks
+
+The project uses the `pre-commit` framework to automate code quality checks before every commit.
+
+### Installation
+
+```bash
+# Install pre-commit framework
+pip install pre-commit
+
+# Set up git hooks (run once per clone)
+pre-commit install
+
+# Verify installation
+pre-commit run --all-files
+```
+
+### Available Hooks
+
+| Hook | Purpose | Auto-fix? |
+|---|---|---|
+| `ruff check` | Linting — detects unused imports, undefined names, complexity | Yes (with --fix) |
+| `black` | Code formatting — enforces consistent style (88-char lines) | Yes |
+| `trailing-whitespace` | Removes trailing whitespace | Yes |
+| `end-of-file-fixer` | Ensures files end with newline | Yes |
+| `check-yaml` | Validates YAML syntax | No |
+| `check-json` | Validates JSON syntax | No |
+| `detect-private-key` | Scans for accidentally committed secrets | No |
+| `flake8` | Additional code quality checks | Partial |
+
+### Local Usage
+
+**Run all checks manually (Windows):**
+```powershell
+.\scripts\pre-commit.ps1
+```
+
+**Auto-fix issues before commit:**
+```powershell
+.\scripts\pre-commit.ps1 -Fix
+```
+
+**Run specific hook:**
+```bash
+pre-commit run ruff --all-files
+pre-commit run black --all-files
+pre-commit run pytest --all-files
+```
+
+**Skip hooks on a single commit (NOT RECOMMENDED):**
+```bash
+git commit --no-verify
+```
+
+### CI Integration
+
+Pre-commit hooks are also run in CI/CD pipelines (see deployment scripts). All PRs must pass all hooks before merge.
+
+---
+
 ## Testing Strategy
 
 - **Unit tests:** Services and repositories tested with mocked DB / mocked PTB context

@@ -10,7 +10,7 @@ Handles:
 import logging
 import csv
 import io
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from typing import List, Optional
 
 from bot.models import Reading
@@ -134,21 +134,22 @@ class ExportService:
             # Tenant can only see apartment for which they have tenant role
             # TODO: Query to find user's apartment
             if apartment_id:
-                readings = await self.readings_repo.get_readings_for_apartment(apartment_id)
+                readings = await self.readings_repo.get_readings_for_apartment(
+                    apartment_id
+                )
         elif role in ("grayhound", "administrator"):
             # Grayhound/Admin can see all apartments
             if apartment_id:
-                readings = await self.readings_repo.get_readings_for_apartment(apartment_id)
+                readings = await self.readings_repo.get_readings_for_apartment(
+                    apartment_id
+                )
             else:
                 # Get all apartments and their readings
                 # TODO: Implement bulk reading fetch for all apartments
                 pass
 
         # Filter by date range
-        filtered = [
-            r for r in readings
-            if date_from <= r.read_at.date() <= date_to
-        ]
+        filtered = [r for r in readings if date_from <= r.read_at.date() <= date_to]
         return filtered
 
     @staticmethod
@@ -166,29 +167,33 @@ class ExportService:
         writer = csv.writer(output)
 
         # Write header
-        writer.writerow([
-            "Date",
-            "Time",
-            "Apartment",
-            "Meter Number",
-            "Reading (kWh)",
-            "Submitted By",
-            "Source",
-            "Notes",
-        ])
+        writer.writerow(
+            [
+                "Date",
+                "Time",
+                "Apartment",
+                "Meter Number",
+                "Reading (kWh)",
+                "Submitted By",
+                "Source",
+                "Notes",
+            ]
+        )
 
         # Write data rows
         for reading in readings:
-            writer.writerow([
-                reading.read_at.date().isoformat(),
-                reading.read_at.time().isoformat(),
-                reading.meter.apartment.number,  # TODO: Verify relationship
-                reading.meter.meter_number,
-                str(reading.value),
-                reading.submitted_by,
-                reading.source,
-                reading.notes or "",
-            ])
+            writer.writerow(
+                [
+                    reading.read_at.date().isoformat(),
+                    reading.read_at.time().isoformat(),
+                    reading.meter.apartment.number,  # TODO: Verify relationship
+                    reading.meter.meter_number,
+                    str(reading.value),
+                    reading.submitted_by,
+                    reading.source,
+                    reading.notes or "",
+                ]
+            )
 
         return output.getvalue()
 

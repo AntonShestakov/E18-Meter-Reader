@@ -1,7 +1,7 @@
 # todo.md
 
-**Session Date:** YYYY-MM-DD  
-**Time Budget:** [X hours]  
+**Session Date:** YYYY-MM-DD
+**Time Budget:** [X hours]
 **Session Goal:** [Brief description of what this session aims to accomplish]
 
 ---

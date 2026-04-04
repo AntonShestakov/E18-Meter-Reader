@@ -10,10 +10,10 @@ Handles:
 
 import logging
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime
 from typing import List, Optional
 
-from bot.models import Reading, Meter
+from bot.models import Reading
 from bot.repositories.readings import ReadingsRepository
 from bot.repositories.meters import MetersRepository
 
@@ -25,7 +25,9 @@ class ReadingService:
     Business logic for meter readings.
     """
 
-    def __init__(self, readings_repo: ReadingsRepository, meters_repo: MetersRepository):
+    def __init__(
+        self, readings_repo: ReadingsRepository, meters_repo: MetersRepository
+    ):
         """
         Initialize reading service.
 
@@ -65,7 +67,7 @@ class ReadingService:
         # Validate value is positive number
         if not isinstance(value, (int, float, Decimal)):
             raise ValueError("Reading value must be numeric")
-        
+
         if value < 0:
             raise ValueError("Reading value cannot be negative")
 
@@ -141,7 +143,9 @@ class ReadingService:
         try:
             readings = await self.readings_repo.get_readings_for_apartment(apartment_id)
             # Filter by date if needed
-            cutoff = datetime.utcnow().date() - __import__("datetime").timedelta(days=days_back)
+            cutoff = datetime.utcnow().date() - __import__("datetime").timedelta(
+                days=days_back
+            )
             return [r for r in readings if r.read_at.date() >= cutoff]
         except Exception as e:
             logger.error(f"Failed to fetch readings for apartment {apartment_id}: {e}")

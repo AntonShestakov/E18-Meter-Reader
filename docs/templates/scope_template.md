@@ -1,7 +1,7 @@
 # scope.md
 
-**Version:** 1.0  
-**Last updated:** YYYY-MM-DD  
+**Version:** 1.0
+**Last updated:** YYYY-MM-DD
 **Status:** Active — defines project boundaries and success criteria
 
 ---

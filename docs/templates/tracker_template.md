@@ -1,7 +1,7 @@
 # tracker.md
 
-**Version:** 1.0  
-**Last updated:** YYYY-MM-DD  
+**Version:** 1.0
+**Last updated:** YYYY-MM-DD
 **Status:** Active task tracking — single source of truth for work items
 
 ---
@@ -17,9 +17,9 @@
 
 ## Status Glyphs (Use These)
 
-⚪ **Not started** — Task defined but not yet begun  
-🔵 **In progress** — Actively being worked on  
-✅ **Done** — Completed and meets acceptance criteria  
+⚪ **Not started** — Task defined but not yet begun
+🔵 **In progress** — Actively being worked on
+✅ **Done** — Completed and meets acceptance criteria
 ⚠️ **Blocked** — Cannot proceed, needs intervention
 
 ---
@@ -143,7 +143,7 @@
 
 **Instructions:** Use sequential numbering starting from T-001. Never reuse numbers.
 
-**Current highest number:** T-XXX  
+**Current highest number:** T-XXX
 **Next task:** T-XXX
 
 ---
