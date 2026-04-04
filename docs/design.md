@@ -67,6 +67,37 @@ Each environment uses its own Telegram bot token and its own database. Config is
 
 ---
 
+## Configuration Management
+
+Configuration is managed through environment variables to ensure security and environment-specific settings.
+
+### Local Development (.env.local)
+For DEV environment, create a `.env.local` file in the project root with the following variables:
+
+```bash
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=your_dev_bot_token_here
+
+# Database
+DATABASE_URL=postgresql://username:password@localhost:5432/e18_meter_reader_dev
+
+# Logging
+LOG_LEVEL=INFO
+```
+
+**Note:** `.env.local` is ignored by `.gitignore` and should never be committed.
+
+### Production Environments (UAT/PROD)
+In cloud environments, configuration is managed via AWS Systems Manager (SSM) Parameter Store or Secrets Manager:
+- `/e18-meter-reader/{env}/telegram-bot-token`
+- `/e18-meter-reader/{env}/database-url`
+- `/e18-meter-reader/{env}/log-level`
+
+### Example Configuration File (.env.example)
+A template `.env.example` is provided in the repository with placeholder values for reference.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology | Rationale |
@@ -112,22 +143,22 @@ project-root/
 │   ├── keyboards/         # InlineKeyboardMarkup builders
 │   ├── texts.py           # ALL user-facing strings: button labels, messages, prompts
 │   └── main.py            # Bot entry point, Application setup
-├── db/
-│   └── migrations/        # Flyway SQL migration files (V1__init.sql, etc.)
+├── migrations/            # Flyway SQL migration files (V1__init.sql, etc.)
 ├── tests/
 │   ├── unit/
 │   └── integration/
 ├── scripts/
-│   ├── deploy_linux.sh
-│   └── deploy_windows.ps1
+│   ├── db_deploy_linux.sh
+│   └── db_deploy_windows.ps1
 ├── docs/
 │   ├── scope.md
 │   ├── design.md
 │   ├── tracker.md
 │   └── handoff.md
 ├── .env.example           # Template for local env vars
-├── requirements.txt
-├── requirements-dev.txt
+├── main.py                # Main entry point
+├── pyproject.toml
+├── .gitignore
 └── README.md
 ```
 
@@ -402,9 +433,7 @@ To be delivered
 - **All navigation and input via inline buttons** — no slash commands beyond `/start`; meter values entered via an inline numeric pad (digits 0–9, decimal point, backspace, confirm)
 - **All user-facing strings in `texts.py`** — button labels, messages, prompts, and error texts are never hardcoded inline; always imported from `bot/texts.py`
 - **Confirmation step** before any write operation (reading submission, role change)
-- **Duplicate reading guard** — bot checks for an existing reading in the current month before allowing submission; user must explicitly confirm replacement
-- **Photo-required flag** — per-apartment setting; when set, tenant submission flow mandates a photo upload before the reading can be saved
-- **Pagination** for lists longer than 5 items (apartments, users, months)
+- **Pagination** for lists longer than 5 items (apartments, users)
 - **Back button** on every screen — users can always return to the previous menu
 - **Error messages** are user-friendly (text from `texts.py`) — technical details logged only
 - **Session state** managed via `ConversationHandler` in PTB — state stored in memory (stateless across restarts; in-progress conversations reset on bot restart, which is acceptable)
@@ -441,16 +470,37 @@ Local development uses a `.env` file (git-ignored). UAT/PROD use AWS SSM Paramet
 
 ### Local (DEV)
 
-```bash
-cp .env.example .env          # fill in BOT_TOKEN, DATABASE_URL
-flyway migrate                 # apply DB migrations
-python -m bot.main             # run bot locally
-```
+1. **Create environment file:**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your actual values
+   ```
+
+2. **Run local deployment script:**
+   ```bash
+   bash ./scripts/db_deploy_linux.sh
+   ```
+
+3. **Run the bot:**
+   ```bash
+   python main.py
+   ```
+
+**Notes:**
+- `db_deploy_linux.sh` loads `.env.local` and derives Flyway settings from `DATABASE_URL`.
+- `flyway.conf` is optional; the script prefers environment-derived Flyway config.
+- If Flyway CLI is not installed, install it or run Flyway via Docker.
+
+**Prerequisites:**
+- Python 3.11+
+- PostgreSQL 15
+- Flyway CLI (for migrations) or Docker
+- Telegram bot token from @BotFather
 
 ### UAT / PROD (Linux EC2)
 
 ```bash
-./scripts/deploy_linux.sh [uat|prod]
+./scripts/db_deploy_linux.sh [uat|prod]
 # Script responsibilities:
 #   1. Pull latest code from Git
 #   2. Install/update dependencies (pip)
@@ -461,7 +511,7 @@ python -m bot.main             # run bot locally
 ### Windows (developer machine UAT push)
 
 ```powershell
-.\scripts\deploy_windows.ps1 [uat|prod]
+.\scripts\db_deploy_windows.ps1 [uat|prod]
 # Same steps as Linux script, PowerShell syntax
 ```
 
